@@ -8,10 +8,11 @@ import {
   useDeleteWorkout,
   useFinishWorkout,
   useStartWorkout,
+  useUpdateWorkout,
 } from "@/api/hooks";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { RestTimer } from "@/components/rest-timer";
-import { Button, EmptyState, Loading } from "@/components/ui";
+import { Button, EmptyState, Input, Loading } from "@/components/ui";
 import { WorkoutExerciseCard } from "@/components/workout-exercise-card";
 import { useWorkoutChannel } from "@/hooks/use-workout-channel";
 import { colors, spacing } from "@/theme/colors";
@@ -23,11 +24,20 @@ export default function WorkoutScreen() {
   const finishWorkout = useFinishWorkout();
   const deleteWorkout = useDeleteWorkout();
   const addExercise = useAddWorkoutExercise();
+  const updateWorkout = useUpdateWorkout();
   const { liveRep, connected } = useWorkoutChannel(workout?.id);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const [notes, setNotes] = useState<string | null>(null);
   const clearRest = useCallback(() => setRestEndsAt(null), []);
+  const adjustRest = useCallback((delta: number) => {
+    setRestEndsAt((prev) => {
+      if (prev === null) return prev;
+      const next = Math.max(Date.now(), prev + delta * 1000);
+      return next <= Date.now() ? null : next;
+    });
+  }, []);
 
   if (isLoading) return <Loading />;
 
@@ -85,7 +95,22 @@ export default function WorkoutScreen() {
           </Text>
         </View>
 
-        {restEndsAt ? <RestTimer endsAt={restEndsAt} onDone={clearRest} /> : null}
+        {restEndsAt ? (
+          <RestTimer endsAt={restEndsAt} onDone={clearRest} onAdjust={adjustRest} />
+        ) : null}
+
+        <Input
+          placeholder="Session notes (how did it feel?)"
+          value={notes ?? workout.notes ?? ""}
+          onChangeText={setNotes}
+          onEndEditing={() => {
+            if (notes !== null && notes !== (workout.notes ?? "")) {
+              updateWorkout.mutate({ id: workout.id, notes: notes.trim() || null });
+            }
+          }}
+          multiline
+          style={{ marginBottom: spacing.sm }}
+        />
 
         {workout.exercises.map((we) => (
           <WorkoutExerciseCard

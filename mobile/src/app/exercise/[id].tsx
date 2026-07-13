@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-n
 import { useExerciseHistory, useExerciseTrend, usePRs } from "@/api/hooks";
 import { TrendLine } from "@/components/charts";
 import { Card, SectionTitle } from "@/components/ui";
+import { fromKg, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
 
 function shortDate(iso: string) {
@@ -17,6 +18,7 @@ export default function ExerciseDetail() {
   const { data: trend } = useExerciseTrend(exerciseId);
   const { data: history } = useExerciseHistory(exerciseId, 10);
   const { data: prs } = usePRs();
+  const unit = useSettings((s) => s.unit);
 
   const exercisePRs = prs?.find((p) => p.exercise.id === exerciseId);
   const chartWidth = width - spacing.md * 4;
@@ -31,9 +33,9 @@ export default function ExerciseDetail() {
       <SectionTitle>Estimated 1RM (Epley)</SectionTitle>
       <Card>
         <TrendLine
-          points={(trend ?? []).map((t) => t.best_est_1rm)}
+          points={(trend ?? []).map((t) => fromKg(t.best_est_1rm, unit))}
           width={chartWidth}
-          unit=" kg"
+          unit={` ${unit}`}
           labels={
             trend && trend.length >= 2
               ? [shortDate(trend[0].date), shortDate(trend[trend.length - 1].date)]
@@ -48,7 +50,9 @@ export default function ExerciseDetail() {
           exercisePRs.records.map((r) => (
             <View key={r.reps} style={styles.prRow}>
               <Text style={styles.prReps}>{r.reps} RM</Text>
-              <Text style={styles.prWeight}>{r.weight_kg} kg</Text>
+              <Text style={styles.prWeight}>
+                {fromKg(r.weight_kg, unit)} {unit}
+              </Text>
               <Text style={styles.prDate}>{shortDate(r.date)}</Text>
             </View>
           ))
@@ -65,7 +69,7 @@ export default function ExerciseDetail() {
             {entry.sets.map((s) => (
               <Text key={s.id} style={styles.historySet}>
                 {s.is_warmup ? "W  " : `${s.set_number}  `}
-                {s.weight_kg} kg × {s.reps}
+                {fromKg(s.weight_kg, unit)} {unit} × {s.reps}
                 {s.rpe != null ? `  @ RPE ${s.rpe}` : ""}
                 {s.source === "device" ? "  📡" : ""}
               </Text>

@@ -10,6 +10,7 @@ import {
 } from "@/api/hooks";
 import type { WorkoutExercise, WorkoutSet } from "@/api/types";
 import { Badge, Card, Input } from "@/components/ui";
+import { fromKg, toKg, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
 
 function SetRow({
@@ -22,12 +23,15 @@ function SetRow({
   weId: number;
 }) {
   const deleteSet = useDeleteSet();
+  const unit = useSettings((s) => s.unit);
   return (
     <View style={styles.setRow}>
       <Text style={[styles.setNumber, set.is_warmup && { color: colors.textFaint }]}>
         {set.is_warmup ? "W" : set.set_number}
       </Text>
-      <Text style={styles.setValue}>{set.weight_kg} kg</Text>
+      <Text style={styles.setValue}>
+        {fromKg(set.weight_kg, unit)} {unit}
+      </Text>
       <Text style={styles.setValue}>× {set.reps}</Text>
       <Text style={styles.setRpe}>{set.rpe != null ? `RPE ${set.rpe}` : ""}</Text>
       {set.source === "device" ? (
@@ -59,6 +63,7 @@ export function WorkoutExerciseCard({
   const { data: history } = useExerciseHistory(we.exercise.id, 1);
   const logSet = useLogSet();
   const removeExercise = useRemoveWorkoutExercise();
+  const unit = useSettings((s) => s.unit);
 
   const previousSets = history?.[0]?.sets.filter((s) => !s.is_warmup) ?? [];
   const nextIndex = we.sets.filter((s) => !s.is_warmup).length;
@@ -70,7 +75,10 @@ export function WorkoutExerciseCard({
   const [rpe, setRpe] = useState("");
   const [warmup, setWarmup] = useState(false);
 
-  const effectiveWeight = weight || (lastLogged ? String(lastLogged.weight_kg) : "") || (ghost ? String(ghost.weight_kg) : "");
+  const effectiveWeight =
+    weight ||
+    (lastLogged ? String(fromKg(lastLogged.weight_kg, unit)) : "") ||
+    (ghost ? String(fromKg(ghost.weight_kg, unit)) : "");
   const effectiveReps = reps || (ghost ? String(ghost.reps) : "");
 
   const submit = () => {
@@ -79,7 +87,7 @@ export function WorkoutExerciseCard({
     if (Number.isNaN(w) || Number.isNaN(r)) return;
     const rpeValue = rpe ? parseFloat(rpe.replace(",", ".")) : null;
     logSet.mutate(
-      { workoutId, weId: we.id, weight_kg: w, reps: r, rpe: rpeValue, is_warmup: warmup },
+      { workoutId, weId: we.id, weight_kg: toKg(w, unit), reps: r, rpe: rpeValue, is_warmup: warmup },
       {
         onSuccess: () => {
           setWeight("");
@@ -99,7 +107,7 @@ export function WorkoutExerciseCard({
           <Text style={styles.name}>{we.exercise.name}</Text>
           <Text style={styles.muted}>
             {we.exercise.muscle_group}
-            {ghost ? `  ·  last: ${ghost.weight_kg} kg × ${ghost.reps}` : ""}
+            {ghost ? `  ·  last: ${fromKg(ghost.weight_kg, unit)} ${unit} × ${ghost.reps}` : ""}
           </Text>
         </View>
         {we.superset_group != null ? (
@@ -132,7 +140,7 @@ export function WorkoutExerciseCard({
           </Text>
         </Pressable>
         <Input
-          placeholder={ghost ? String(ghost.weight_kg) : "kg"}
+          placeholder={ghost ? String(fromKg(ghost.weight_kg, unit)) : unit}
           keyboardType="decimal-pad"
           value={weight}
           onChangeText={setWeight}

@@ -128,6 +128,12 @@ export function useStartWorkout() {
   );
 }
 
+export function useUpdateWorkout() {
+  return useWorkoutMutation(({ id, notes }: { id: number; notes: string | null }) =>
+    api<Workout>(`/workouts/${id}`, { method: "PATCH", body: { notes } }),
+  );
+}
+
 export function useFinishWorkout() {
   const qc = useQueryClient();
   return useMutation({

@@ -6,6 +6,7 @@ import { useEffect } from "react";
 
 import { Loading } from "@/components/ui";
 import { useAuth } from "@/store/auth";
+import { useSettings } from "@/store/settings";
 import { colors } from "@/theme/colors";
 
 SplashScreen.preventAutoHideAsync();
@@ -16,10 +17,12 @@ const queryClient = new QueryClient({
 
 function AuthGate() {
   const { token, hydrated, hydrate } = useAuth();
+  const hydrateSettings = useSettings((s) => s.hydrate);
 
   useEffect(() => {
     hydrate();
-  }, [hydrate]);
+    hydrateSettings();
+  }, [hydrate, hydrateSettings]);
 
   useEffect(() => {
     if (hydrated) SplashScreen.hideAsync();

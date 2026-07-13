@@ -11,6 +11,7 @@ import {
 } from "@/api/hooks";
 import { Button, Card, Input, SectionTitle } from "@/components/ui";
 import { useAuth } from "@/store/auth";
+import { fromKg, toKg, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
 
 function formatDate(iso: string) {
@@ -29,6 +30,7 @@ export default function Home() {
   const { data: volume } = useWeeklyVolume(8);
   const startWorkout = useStartWorkout();
   const logBodyweight = useLogBodyweight();
+  const unit = useSettings((s) => s.unit);
   const [bw, setBw] = useState("");
 
   const thisWeek = volume?.length ? volume[volume.length - 1] : null;
@@ -73,7 +75,9 @@ export default function Home() {
       <SectionTitle>This week</SectionTitle>
       <Card>
         <Text style={styles.volumeNumber}>
-          {thisWeek ? `${Math.round(thisWeek.total_volume_kg).toLocaleString()} kg` : "—"}
+          {thisWeek
+            ? `${Math.round(fromKg(thisWeek.total_volume_kg, unit)).toLocaleString()} ${unit}`
+            : "—"}
         </Text>
         <Text style={styles.cardSub}>total volume lifted</Text>
       </Card>
@@ -81,7 +85,7 @@ export default function Home() {
       <SectionTitle>Bodyweight</SectionTitle>
       <Card style={styles.bwRow}>
         <Input
-          placeholder="kg"
+          placeholder={unit}
           keyboardType="decimal-pad"
           value={bw}
           onChangeText={setBw}
@@ -94,7 +98,7 @@ export default function Home() {
             const weight = parseFloat(bw.replace(",", "."));
             if (!Number.isNaN(weight) && weight > 0) {
               logBodyweight.mutate(
-                { date: new Date().toISOString().slice(0, 10), weight_kg: weight },
+                { date: new Date().toISOString().slice(0, 10), weight_kg: toKg(weight, unit) },
                 { onSuccess: () => setBw("") },
               );
             }

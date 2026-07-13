@@ -17,7 +17,8 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 
 ### Features (v1 — the Tracked strength-training core)
 
-- Workout logging: weight, reps, RPE, warm-up sets, supersets, swap/reorder mid-session
+- Workout logging: weight, reps, RPE, warm-up sets, supersets, swap/reorder mid-session,
+  session notes, kg/lb unit toggle
 - Routines/templates with target sets × rep ranges
 - Exercise library (~60 seeded) + custom exercises, with per-exercise history
   ("last time" ghost values on every set row)
@@ -64,6 +65,15 @@ python examples/raspi_rep_counter.py --server http://<your-lan-ip>:8000 --api-ke
 ```
 
 Watch reps tick live on the workout screen; completed sets are logged with a device badge.
+
+Got a camera? `examples/raspi_camera_mediapipe.py` is the real thing — MediaPipe pose tracking
+counts reps from joint angles (elbow, knee, hip) and finalizes the set after an idle period:
+
+```bash
+pip install mediapipe opencv-python requests websockets
+python examples/raspi_camera_mediapipe.py --server http://<ip>:8000 --api-key rzk_... \
+    --exercise-id 28 --weight 12.5 --joint elbow_right --preview
+```
 
 ## Device API in 30 seconds
 

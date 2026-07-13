@@ -113,6 +113,19 @@ def test_add_swap_reorder_superset(client, headers):
     )
 
 
+def test_workout_notes_update(client, headers):
+    workout = client.post("/workouts", json={}, headers=headers).json()
+    res = client.patch(
+        f"/workouts/{workout['id']}", json={"notes": "Felt strong today"}, headers=headers
+    )
+    assert res.status_code == 200
+    assert res.json()["notes"] == "Felt strong today"
+
+    # clearing notes with explicit null
+    res = client.patch(f"/workouts/{workout['id']}", json={"notes": None}, headers=headers)
+    assert res.json()["notes"] is None
+
+
 def test_workout_isolation_between_users(client, headers):
     workout = client.post("/workouts", json={}, headers=headers).json()
     other = client.post(

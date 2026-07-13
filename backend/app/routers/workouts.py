@@ -16,6 +16,7 @@ from ..schemas import (
     WorkoutOut,
     WorkoutStart,
     WorkoutSummary,
+    WorkoutUpdate,
 )
 from ..security import get_current_user
 from .exercises import get_visible_exercise
@@ -101,6 +102,21 @@ def get_workout(
     workout_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ):
     return get_own_workout(db, user, workout_id)
+
+
+@router.patch("/{workout_id}", response_model=WorkoutOut)
+def update_workout(
+    workout_id: int,
+    body: WorkoutUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    workout = get_own_workout(db, user, workout_id)
+    if "notes" in body.model_fields_set:
+        workout.notes = body.notes
+    db.commit()
+    db.refresh(workout)
+    return workout
 
 
 @router.post("/{workout_id}/finish", response_model=WorkoutOut)

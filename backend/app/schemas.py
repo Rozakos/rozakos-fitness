@@ -91,6 +91,10 @@ class WorkoutStart(BaseModel):
     notes: str | None = None
 
 
+class WorkoutUpdate(BaseModel):
+    notes: str | None = None
+
+
 class SetIn(BaseModel):
     reps: int = Field(ge=0)
     weight_kg: float = Field(default=0.0, ge=0)

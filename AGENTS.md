@@ -52,11 +52,17 @@ sans-serif. All mobile theme tokens live in `mobile/src/theme/`.
 - [x] End-to-end verified against live server: full REST flow, device REST set logging, and live WS
   (example client streamed reps → phone-side socket received `rep` + `set_logged`); see
   `.claude/skills/verify/SKILL.md` for the recipe
+- [x] v1.1 (2026-07-14): workout notes (`PATCH /workouts/{id}` + UI, verified live), kg/lb unit
+  toggle (`mobile/src/store/settings.ts` — server always stores kg, conversion at display/input
+  boundary), rest timer ±30s, real MediaPipe camera client (`examples/raspi_camera_mediapipe.py`,
+  needs hardware to test)
+- [x] Pushed to https://github.com/Rozakos/rozakos-fitness (repo-local git identity: Rozakos / billmewtwo1996@gmail.com)
 - [ ] Not yet verified on a physical phone via Expo Go (no emulator on this box)
-- Nothing committed to git yet (user hasn't asked for commits)
+- [ ] MediaPipe client untested on real hardware (no camera here); angle thresholds need calibration
 
 ## Next steps when picking up
 
 1. On-phone smoke test: `uvicorn app.main:app --host 0.0.0.0` + `npx expo start`, scan QR with Expo Go.
-2. Candidate v1.1 items: per-set rest-timer overrides, workout notes UI, kg/lb toggle, real Raspi CV client (MediaPipe).
-3. Keep this Status section updated as work progresses.
+2. Test `examples/raspi_camera_mediapipe.py` on the Pi with a camera; calibrate --angle-low/high per movement.
+3. Candidate v1.2 items: per-exercise rest overrides in routines, workout summary screen after finish, plate calculator.
+4. Keep this Status section updated as work progresses.

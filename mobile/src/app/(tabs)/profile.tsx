@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, Text, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { useBodyweight, usePRs, useWeeklyVolume } from "@/api/hooks";
 import { LabeledBars, TrendLine, WeeklyBars } from "@/components/charts";
 import { Button, Card, SectionTitle } from "@/components/ui";
 import { useAuth } from "@/store/auth";
-import { colors, spacing } from "@/theme/colors";
+import { WeightUnit, fromKg, useSettings } from "@/store/settings";
+import { colors, radius, spacing } from "@/theme/colors";
 
 export default function Profile() {
   const router = useRouter();
@@ -14,16 +15,17 @@ export default function Profile() {
   const { data: volume } = useWeeklyVolume(12);
   const { data: bodyweight } = useBodyweight();
   const { data: prs } = usePRs();
+  const { unit, setUnit } = useSettings();
 
   const chartWidth = width - spacing.md * 4;
   const thisWeek = volume?.length ? volume[volume.length - 1] : null;
   const muscleData = thisWeek
     ? Object.entries(thisWeek.by_muscle_group)
         .sort(([, a], [, b]) => b - a)
-        .map(([label, value]) => ({ label, value }))
+        .map(([label, value]) => ({ label, value: fromKg(value, unit) }))
     : [];
   // bodyweight arrives newest-first; charts read left→right in time
-  const bwPoints = (bodyweight ?? []).slice().reverse().map((e) => e.weight_kg);
+  const bwPoints = (bodyweight ?? []).slice().reverse().map((e) => fromKg(e.weight_kg, unit));
 
   const bestPRs = (prs ?? [])
     .map((p) => {
@@ -41,9 +43,26 @@ export default function Profile() {
       <Text style={styles.name}>{user?.display_name}</Text>
       <Text style={styles.muted}>{user?.email}</Text>
 
+      <SectionTitle>Units</SectionTitle>
+      <View style={styles.unitRow}>
+        {(["kg", "lb"] as WeightUnit[]).map((u) => (
+          <Pressable
+            key={u}
+            onPress={() => setUnit(u)}
+            style={[styles.unitChip, u === unit && { backgroundColor: colors.accent }]}
+          >
+            <Text style={styles.unitText}>{u}</Text>
+          </Pressable>
+        ))}
+      </View>
+
       <SectionTitle>Weekly volume (12 weeks)</SectionTitle>
       <Card>
-        <WeeklyBars values={(volume ?? []).map((w) => w.total_volume_kg)} width={chartWidth} unit=" kg" />
+        <WeeklyBars
+          values={(volume ?? []).map((w) => fromKg(w.total_volume_kg, unit))}
+          width={chartWidth}
+          unit={` ${unit}`}
+        />
       </Card>
 
       <SectionTitle>This week by muscle group</SectionTitle>
@@ -53,7 +72,7 @@ export default function Profile() {
 
       <SectionTitle>Bodyweight</SectionTitle>
       <Card>
-        <TrendLine points={bwPoints} width={chartWidth} unit=" kg" color={colors.chartCrimson} />
+        <TrendLine points={bwPoints} width={chartWidth} unit={` ${unit}`} color={colors.chartCrimson} />
       </Card>
 
       <SectionTitle>Top personal records</SectionTitle>
@@ -61,7 +80,9 @@ export default function Profile() {
         {bestPRs.length ? (
           bestPRs.map((pr) => (
             <Text key={pr.name} style={styles.prLine}>
-              <Text style={{ color: colors.success, fontWeight: "800" }}>{pr.best.weight_kg} kg</Text>
+              <Text style={{ color: colors.success, fontWeight: "800" }}>
+                {fromKg(pr.best.weight_kg, unit)} {unit}
+              </Text>
               {"  "}
               {pr.name} × {pr.best.reps}
             </Text>
@@ -87,6 +108,14 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
+  unitRow: { flexDirection: "row", gap: spacing.sm },
+  unitChip: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 8,
+  },
+  unitText: { color: colors.text, fontWeight: "800" },
   name: { color: colors.text, fontSize: 24, fontWeight: "900" },
   muted: { color: colors.textMuted, fontSize: 13 },
   prLine: { color: colors.text, fontSize: 14, paddingVertical: 4 },

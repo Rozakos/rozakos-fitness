@@ -1,33 +1,10 @@
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
 import { create } from "zustand";
 
 import type { User } from "../api/types";
+import { storage } from "./storage";
 
 const TOKEN_KEY = "rozakos_token";
 const USER_KEY = "rozakos_user";
-
-// SecureStore is unavailable on web; fall back to localStorage there.
-const storage = {
-  async get(key: string): Promise<string | null> {
-    if (Platform.OS === "web") return globalThis.localStorage?.getItem(key) ?? null;
-    return SecureStore.getItemAsync(key);
-  },
-  async set(key: string, value: string): Promise<void> {
-    if (Platform.OS === "web") {
-      globalThis.localStorage?.setItem(key, value);
-      return;
-    }
-    await SecureStore.setItemAsync(key, value);
-  },
-  async delete(key: string): Promise<void> {
-    if (Platform.OS === "web") {
-      globalThis.localStorage?.removeItem(key);
-      return;
-    }
-    await SecureStore.deleteItemAsync(key);
-  },
-};
 
 interface AuthState {
   token: string | null;
