@@ -14,6 +14,7 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 | API server | Python, FastAPI, SQLAlchemy, SQLite | `backend/` |
 | Mobile app | React Native, Expo, TypeScript | `mobile/` |
 | Device examples | Python (requests + websockets) | `examples/` |
+| Docs | [API reference](docs/api.md) · [Device integration guide](docs/device-integration.md) | `docs/` |
 
 ### Features (v1 — the Tracked strength-training core)
 
@@ -39,8 +40,10 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --reload
 ```
 
-- Interactive API docs: http://localhost:8000/docs
-- The database (`fitness.db`) is created and seeded with exercises on first start.
+- Interactive API docs: http://localhost:8000/docs (full reference: [docs/api.md](docs/api.md))
+- The database (`fitness.db`) is created and seeded with exercises on first start. After
+  pulling a schema change, delete the file — it's dev-only and there are no migrations yet.
+- Configuration: copy `backend/.env.example` to `backend/.env` (all optional in dev).
 - Run tests: `pytest`
 
 ### Mobile app
@@ -51,8 +54,10 @@ npm install
 npx expo start
 ```
 
-Scan the QR code with **Expo Go** on your phone. The phone must reach your dev machine —
-set the API base URL to your LAN IP (see `mobile/src/api/config.ts`).
+Scan the QR code with **Expo Go** on your phone. The app auto-derives the API URL from the
+Metro dev server's LAN IP, so if the phone can load the app it can reach the backend — just
+run uvicorn with `--host 0.0.0.0`. To point elsewhere, set `EXPO_PUBLIC_API_URL`
+(see `mobile/src/api/config.ts`).
 
 ### Try the device flow (no hardware needed)
 
@@ -87,7 +92,8 @@ WS   /ws/workout/{id}?api_key=...              -> stream {"type":"rep",...} and
 ```
 
 `set_complete` messages are persisted server-side and broadcast to the phone as
-`set_logged` — no polling needed.
+`set_logged` — no polling needed. Full message spec and a step-by-step build guide:
+[docs/device-integration.md](docs/device-integration.md).
 
 ## Configuration
 

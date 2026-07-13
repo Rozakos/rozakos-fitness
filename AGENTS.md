@@ -28,7 +28,9 @@ sans-serif. All mobile theme tokens live in `mobile/src/theme/`.
   - `app/seed.py` — ~60 built-in exercises, seeded on startup
   - `tests/` — pytest; run with `cd backend && python -m pytest tests -q`
 - `mobile/` — Expo (React Native, TypeScript, expo-router). State: React Query (server) + zustand (active workout). Charts: react-native-gifted-charts.
-- `examples/raspi_rep_counter.py` — simulated device client (REST poll + WS rep streaming).
+- `examples/raspi_rep_counter.py` — simulated device client; `raspi_camera_mediapipe.py` — real CV one.
+- `docs/api.md` — full REST + WebSocket reference; `docs/device-integration.md` — device build guide.
+  **Keep both in sync with router/protocol changes.**
 
 ## Conventions & gotchas
 
