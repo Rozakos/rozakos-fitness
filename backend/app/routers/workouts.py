@@ -67,6 +67,8 @@ def start_workout(
                     exercise_id=re.exercise_id,
                     order=re.order,
                     superset_group=re.superset_group,
+                    target_reps_min=re.target_reps_min,
+                    target_reps_max=re.target_reps_max,
                 )
             )
     db.add(workout)

@@ -9,6 +9,7 @@ import {
   useFinishWorkout,
   useStartWorkout,
   useUpdateWorkout,
+  useUpdateWorkoutExercise,
 } from "@/api/hooks";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { RestTimer } from "@/components/rest-timer";
@@ -25,9 +26,11 @@ export default function WorkoutScreen() {
   const deleteWorkout = useDeleteWorkout();
   const addExercise = useAddWorkoutExercise();
   const updateWorkout = useUpdateWorkout();
+  const updateExercise = useUpdateWorkoutExercise();
   const { liveRep, connected } = useWorkoutChannel(workout?.id);
 
-  const [pickerOpen, setPickerOpen] = useState(false);
+  // picker either adds a new exercise or swaps the movement of an existing one
+  const [pickerTarget, setPickerTarget] = useState<"add" | number | null>(null);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [notes, setNotes] = useState<string | null>(null);
   const clearRest = useCallback(() => setRestEndsAt(null), []);
@@ -76,7 +79,18 @@ export default function WorkoutScreen() {
       ]);
       return;
     }
-    finishWorkout.mutate(workout.id);
+    finishWorkout.mutate(workout.id, {
+      onSuccess: (finished) => router.push(`/workout-summary/${finished.id}`),
+    });
+  };
+
+  const moveExercise = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= workout.exercises.length) return;
+    const a = workout.exercises[index];
+    const b = workout.exercises[target];
+    updateExercise.mutate({ workoutId: workout.id, weId: a.id, order: target });
+    updateExercise.mutate({ workoutId: workout.id, weId: b.id, order: index });
   };
 
   return (
@@ -112,7 +126,7 @@ export default function WorkoutScreen() {
           style={{ marginBottom: spacing.sm }}
         />
 
-        {workout.exercises.map((we) => (
+        {workout.exercises.map((we, index) => (
           <WorkoutExerciseCard
             key={we.id}
             workoutId={workout.id}
@@ -121,20 +135,30 @@ export default function WorkoutScreen() {
               liveRep && liveRep.exerciseId === we.exercise.id ? liveRep.count : undefined
             }
             onSetLogged={(rest) => setRestEndsAt(Date.now() + rest * 1000)}
+            onSwap={() => setPickerTarget(we.id)}
+            onMove={(direction) => moveExercise(index, direction)}
           />
         ))}
 
-        <Button title="+ Add exercise" variant="secondary" onPress={() => setPickerOpen(true)} />
+        <Button title="+ Add exercise" variant="secondary" onPress={() => setPickerTarget("add")} />
         <View style={{ height: spacing.sm }} />
         <Button title="Finish workout" onPress={confirmFinish} loading={finishWorkout.isPending} />
       </ScrollView>
 
       <ExercisePicker
-        visible={pickerOpen}
-        onClose={() => setPickerOpen(false)}
+        visible={pickerTarget !== null}
+        onClose={() => setPickerTarget(null)}
         onPick={(exercise) => {
-          setPickerOpen(false);
-          addExercise.mutate({ workoutId: workout.id, exerciseId: exercise.id });
+          if (pickerTarget === "add") {
+            addExercise.mutate({ workoutId: workout.id, exerciseId: exercise.id });
+          } else if (pickerTarget !== null) {
+            updateExercise.mutate({
+              workoutId: workout.id,
+              weId: pickerTarget,
+              exercise_id: exercise.id,
+            });
+          }
+          setPickerTarget(null);
         }}
       />
     </View>

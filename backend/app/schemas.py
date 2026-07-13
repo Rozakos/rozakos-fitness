@@ -136,6 +136,8 @@ class WorkoutExerciseOut(ORMModel):
     exercise: ExerciseOut
     order: int
     superset_group: int | None
+    target_reps_min: int | None
+    target_reps_max: int | None
     sets: list[SetOut]
 
 

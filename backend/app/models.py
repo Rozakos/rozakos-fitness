@@ -104,6 +104,9 @@ class WorkoutExercise(Base):
     exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"), index=True)
     order: Mapped[int] = mapped_column(Integer, default=0)
     superset_group: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # copied from the routine at start so the app can show targets + progression hints
+    target_reps_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    target_reps_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     workout: Mapped[Workout] = relationship(back_populates="exercises")
     exercise: Mapped[Exercise] = relationship()

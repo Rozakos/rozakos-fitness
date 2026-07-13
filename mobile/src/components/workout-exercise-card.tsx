@@ -9,8 +9,9 @@ import {
   useRemoveWorkoutExercise,
 } from "@/api/hooks";
 import type { WorkoutExercise, WorkoutSet } from "@/api/types";
+import { PlateCalculator } from "@/components/plate-calculator";
 import { Badge, Card, Input } from "@/components/ui";
-import { fromKg, toKg, useSettings } from "@/store/settings";
+import { displayToRpe, fromKg, rpeToDisplay, toKg, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
 
 function SetRow({
@@ -23,7 +24,7 @@ function SetRow({
   weId: number;
 }) {
   const deleteSet = useDeleteSet();
-  const unit = useSettings((s) => s.unit);
+  const { unit, intensityMode } = useSettings();
   return (
     <View style={styles.setRow}>
       <Text style={[styles.setNumber, set.is_warmup && { color: colors.textFaint }]}>
@@ -33,7 +34,9 @@ function SetRow({
         {fromKg(set.weight_kg, unit)} {unit}
       </Text>
       <Text style={styles.setValue}>× {set.reps}</Text>
-      <Text style={styles.setRpe}>{set.rpe != null ? `RPE ${set.rpe}` : ""}</Text>
+      <Text style={styles.setRpe}>
+        {set.rpe != null ? rpeToDisplay(set.rpe, intensityMode) : ""}
+      </Text>
       {set.source === "device" ? (
         <Badge label="📡" color={colors.surfaceRaised} />
       ) : (
@@ -53,27 +56,38 @@ export function WorkoutExerciseCard({
   workoutId,
   we,
   onSetLogged,
+  onSwap,
+  onMove,
   liveRepCount,
 }: {
   workoutId: number;
   we: WorkoutExercise;
   onSetLogged: (restSeconds: number) => void;
+  onSwap: () => void;
+  onMove: (direction: -1 | 1) => void;
   liveRepCount?: number;
 }) {
   const { data: history } = useExerciseHistory(we.exercise.id, 1);
   const logSet = useLogSet();
   const removeExercise = useRemoveWorkoutExercise();
-  const unit = useSettings((s) => s.unit);
+  const { unit, intensityMode } = useSettings();
 
   const previousSets = history?.[0]?.sets.filter((s) => !s.is_warmup) ?? [];
   const nextIndex = we.sets.filter((s) => !s.is_warmup).length;
   const ghost = previousSets[nextIndex] ?? previousSets[previousSets.length - 1];
   const lastLogged = we.sets[we.sets.length - 1];
 
+  // double progression: every working set last session reached the top of the rep range
+  const hitTargetLastTime =
+    we.target_reps_max != null &&
+    previousSets.length > 0 &&
+    previousSets.every((s) => s.reps >= we.target_reps_max!);
+
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
-  const [rpe, setRpe] = useState("");
+  const [intensity, setIntensity] = useState("");
   const [warmup, setWarmup] = useState(false);
+  const [platesOpen, setPlatesOpen] = useState(false);
 
   const effectiveWeight =
     weight ||
@@ -85,14 +99,15 @@ export function WorkoutExerciseCard({
     const w = parseFloat(effectiveWeight.replace(",", "."));
     const r = parseInt(effectiveReps, 10);
     if (Number.isNaN(w) || Number.isNaN(r)) return;
-    const rpeValue = rpe ? parseFloat(rpe.replace(",", ".")) : null;
+    const raw = intensity ? parseFloat(intensity.replace(",", ".")) : null;
+    const rpeValue = raw !== null && !Number.isNaN(raw) ? displayToRpe(raw, intensityMode) : null;
     logSet.mutate(
       { workoutId, weId: we.id, weight_kg: toKg(w, unit), reps: r, rpe: rpeValue, is_warmup: warmup },
       {
         onSuccess: () => {
           setWeight("");
           setReps("");
-          setRpe("");
+          setIntensity("");
           setWarmup(false);
           onSetLogged(we.exercise.rest_seconds_default);
         },
@@ -107,20 +122,39 @@ export function WorkoutExerciseCard({
           <Text style={styles.name}>{we.exercise.name}</Text>
           <Text style={styles.muted}>
             {we.exercise.muscle_group}
+            {we.target_reps_min != null && we.target_reps_max != null
+              ? `  ·  target ${we.target_reps_min}–${we.target_reps_max} reps`
+              : ""}
             {ghost ? `  ·  last: ${fromKg(ghost.weight_kg, unit)} ${unit} × ${ghost.reps}` : ""}
           </Text>
         </View>
         {we.superset_group != null ? (
           <Badge label={`SS${we.superset_group}`} color={colors.accent} />
         ) : null}
-        <Pressable
-          onPress={() => removeExercise.mutate({ workoutId, weId: we.id })}
-          hitSlop={8}
-          style={{ marginLeft: spacing.sm }}
-        >
-          <Ionicons name="trash-outline" size={18} color={colors.textFaint} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => onMove(-1)} hitSlop={6}>
+            <Ionicons name="chevron-up" size={18} color={colors.textMuted} />
+          </Pressable>
+          <Pressable onPress={() => onMove(1)} hitSlop={6}>
+            <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+          </Pressable>
+          <Pressable onPress={onSwap} hitSlop={6}>
+            <Ionicons name="swap-horizontal" size={18} color={colors.textMuted} />
+          </Pressable>
+          <Pressable onPress={() => removeExercise.mutate({ workoutId, weId: we.id })} hitSlop={6}>
+            <Ionicons name="trash-outline" size={18} color={colors.textFaint} />
+          </Pressable>
+        </View>
       </View>
+
+      {hitTargetLastTime ? (
+        <View style={styles.hintBar}>
+          <Ionicons name="trending-up" size={14} color={colors.success} />
+          <Text style={styles.hintText}>
+            All sets hit the top of the range last time — add weight!
+          </Text>
+        </View>
+      ) : null}
 
       {liveRepCount !== undefined ? (
         <View style={styles.liveBar}>
@@ -146,6 +180,14 @@ export function WorkoutExerciseCard({
           onChangeText={setWeight}
           style={styles.input}
         />
+        <Pressable
+          onPress={() => setPlatesOpen(true)}
+          hitSlop={4}
+          disabled={!effectiveWeight}
+          style={{ opacity: effectiveWeight ? 1 : 0.4 }}
+        >
+          <Ionicons name="disc-outline" size={20} color={colors.textMuted} />
+        </Pressable>
         <Input
           placeholder={ghost ? String(ghost.reps) : "reps"}
           keyboardType="number-pad"
@@ -154,10 +196,10 @@ export function WorkoutExerciseCard({
           style={styles.input}
         />
         <Input
-          placeholder="RPE"
+          placeholder={intensityMode.toUpperCase()}
           keyboardType="decimal-pad"
-          value={rpe}
-          onChangeText={setRpe}
+          value={intensity}
+          onChangeText={setIntensity}
           style={[styles.input, { flex: 0.7 }]}
         />
         <Pressable
@@ -168,14 +210,34 @@ export function WorkoutExerciseCard({
           <Ionicons name="checkmark" size={20} color={colors.text} />
         </Pressable>
       </View>
+
+      <PlateCalculator
+        visible={platesOpen}
+        weight={parseFloat(effectiveWeight.replace(",", ".")) || 0}
+        unit={unit}
+        onClose={() => setPlatesOpen(false)}
+      />
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", marginBottom: spacing.sm },
+  headerActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    alignItems: "center",
+    marginLeft: spacing.sm,
+  },
   name: { color: colors.text, fontSize: 16, fontWeight: "700" },
   muted: { color: colors.textMuted, fontSize: 12 },
+  hintBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  hintText: { color: colors.success, fontSize: 12, fontWeight: "700" },
   liveBar: {
     flexDirection: "row",
     alignItems: "center",

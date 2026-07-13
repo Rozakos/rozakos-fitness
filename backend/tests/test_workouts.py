@@ -44,6 +44,9 @@ def test_workout_lifecycle(client, headers):
     assert res.status_code == 201, res.text
     workout = res.json()
     assert len(workout["exercises"]) == 2
+    # targets copied from the routine for in-session hints
+    assert workout["exercises"][0]["target_reps_min"] == 5
+    assert workout["exercises"][0]["target_reps_max"] == 8
 
     # only one active workout at a time
     assert client.post("/workouts", json={}, headers=headers).status_code == 409

@@ -17,9 +17,10 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 
 ### Features (v1 — the Tracked strength-training core)
 
-- Workout logging: weight, reps, RPE, warm-up sets, supersets, swap/reorder mid-session,
-  session notes, kg/lb unit toggle
-- Routines/templates with target sets × rep ranges
+- Workout logging: weight, reps, RPE or RIR, warm-up sets, supersets, swap/reorder mid-session,
+  session notes, kg/lb unit toggle, plate calculator
+- Routines/templates with target sets × rep ranges, double-progression hints in-session
+- Post-workout summary with duration, volume, and PR badges
 - Exercise library (~60 seeded) + custom exercises, with per-exercise history
   ("last time" ghost values on every set row)
 - Progress: per-rep-count PRs, estimated-1RM trend (Epley), weekly volume per muscle group

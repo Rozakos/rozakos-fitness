@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-n
 import { useExerciseHistory, useExerciseTrend, usePRs } from "@/api/hooks";
 import { TrendLine } from "@/components/charts";
 import { Card, SectionTitle } from "@/components/ui";
-import { fromKg, useSettings } from "@/store/settings";
+import { fromKg, rpeToDisplay, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
 
 function shortDate(iso: string) {
@@ -18,7 +18,7 @@ export default function ExerciseDetail() {
   const { data: trend } = useExerciseTrend(exerciseId);
   const { data: history } = useExerciseHistory(exerciseId, 10);
   const { data: prs } = usePRs();
-  const unit = useSettings((s) => s.unit);
+  const { unit, intensityMode } = useSettings();
 
   const exercisePRs = prs?.find((p) => p.exercise.id === exerciseId);
   const chartWidth = width - spacing.md * 4;
@@ -70,7 +70,7 @@ export default function ExerciseDetail() {
               <Text key={s.id} style={styles.historySet}>
                 {s.is_warmup ? "W  " : `${s.set_number}  `}
                 {fromKg(s.weight_kg, unit)} {unit} × {s.reps}
-                {s.rpe != null ? `  @ RPE ${s.rpe}` : ""}
+                {s.rpe != null ? `  @ ${rpeToDisplay(s.rpe, intensityMode)}` : ""}
                 {s.source === "device" ? "  📡" : ""}
               </Text>
             ))}

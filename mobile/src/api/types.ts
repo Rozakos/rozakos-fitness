@@ -53,6 +53,8 @@ export interface WorkoutExercise {
   exercise: Exercise;
   order: number;
   superset_group: number | null;
+  target_reps_min: number | null;
+  target_reps_max: number | null;
   sets: WorkoutSet[];
 }
 

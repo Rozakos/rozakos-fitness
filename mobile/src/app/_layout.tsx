@@ -42,6 +42,7 @@ function AuthGate() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="exercise/[id]" options={{ title: "Exercise" }} />
         <Stack.Screen name="routine/[id]" options={{ title: "Routine" }} />
+        <Stack.Screen name="workout-summary/[id]" options={{ title: "Workout complete" }} />
         <Stack.Screen name="devices" options={{ title: "Devices" }} />
       </Stack.Protected>
       <Stack.Protected guard={!token}>

@@ -57,6 +57,10 @@ sans-serif. All mobile theme tokens live in `mobile/src/theme/`.
   boundary), rest timer ±30s, real MediaPipe camera client (`examples/raspi_camera_mediapipe.py`,
   needs hardware to test)
 - [x] Pushed to https://github.com/Rozakos/rozakos-fitness (repo-local git identity: Rozakos / billmewtwo1996@gmail.com)
+- [x] v1.2 (2026-07-14): mid-workout swap/reorder UI, post-workout summary screen with PR badges
+  (`workout-summary/[id]`), RPE-or-RIR setting (server stores RPE only; RIR = 10 − RPE at the UI
+  boundary), double-progression hint (targets copied from routine onto WorkoutExercise —
+  **schema change: delete stale dev fitness.db, create_all won't add columns**), plate calculator
 - [ ] Not yet verified on a physical phone via Expo Go (no emulator on this box)
 - [ ] MediaPipe client untested on real hardware (no camera here); angle thresholds need calibration
 
@@ -64,5 +68,6 @@ sans-serif. All mobile theme tokens live in `mobile/src/theme/`.
 
 1. On-phone smoke test: `uvicorn app.main:app --host 0.0.0.0` + `npx expo start`, scan QR with Expo Go.
 2. Test `examples/raspi_camera_mediapipe.py` on the Pi with a camera; calibrate --angle-low/high per movement.
-3. Candidate v1.2 items: per-exercise rest overrides in routines, workout summary screen after finish, plate calculator.
+3. Candidate v1.3 items: programs with phases/roadmaps, bodyweight-relative PRs, trend smoothing,
+   HealthKit/Health Connect, import from Strong/Hevy CSV. Nutrition/AI/social remain deliberately out of scope.
 4. Keep this Status section updated as work progresses.

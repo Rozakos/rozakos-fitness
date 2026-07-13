@@ -5,7 +5,7 @@ import { useBodyweight, usePRs, useWeeklyVolume } from "@/api/hooks";
 import { LabeledBars, TrendLine, WeeklyBars } from "@/components/charts";
 import { Button, Card, SectionTitle } from "@/components/ui";
 import { useAuth } from "@/store/auth";
-import { WeightUnit, fromKg, useSettings } from "@/store/settings";
+import { IntensityMode, WeightUnit, fromKg, useSettings } from "@/store/settings";
 import { colors, radius, spacing } from "@/theme/colors";
 
 export default function Profile() {
@@ -15,7 +15,7 @@ export default function Profile() {
   const { data: volume } = useWeeklyVolume(12);
   const { data: bodyweight } = useBodyweight();
   const { data: prs } = usePRs();
-  const { unit, setUnit } = useSettings();
+  const { unit, setUnit, intensityMode, setIntensityMode } = useSettings();
 
   const chartWidth = width - spacing.md * 4;
   const thisWeek = volume?.length ? volume[volume.length - 1] : null;
@@ -43,7 +43,7 @@ export default function Profile() {
       <Text style={styles.name}>{user?.display_name}</Text>
       <Text style={styles.muted}>{user?.email}</Text>
 
-      <SectionTitle>Units</SectionTitle>
+      <SectionTitle>Settings</SectionTitle>
       <View style={styles.unitRow}>
         {(["kg", "lb"] as WeightUnit[]).map((u) => (
           <Pressable
@@ -52,6 +52,16 @@ export default function Profile() {
             style={[styles.unitChip, u === unit && { backgroundColor: colors.accent }]}
           >
             <Text style={styles.unitText}>{u}</Text>
+          </Pressable>
+        ))}
+        <View style={{ width: spacing.md }} />
+        {(["rpe", "rir"] as IntensityMode[]).map((m) => (
+          <Pressable
+            key={m}
+            onPress={() => setIntensityMode(m)}
+            style={[styles.unitChip, m === intensityMode && { backgroundColor: colors.accent }]}
+          >
+            <Text style={styles.unitText}>{m.toUpperCase()}</Text>
           </Pressable>
         ))}
       </View>
