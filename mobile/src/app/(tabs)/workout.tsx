@@ -1,0 +1,130 @@
+import { useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+
+import {
+  useActiveWorkout,
+  useAddWorkoutExercise,
+  useDeleteWorkout,
+  useFinishWorkout,
+  useStartWorkout,
+} from "@/api/hooks";
+import { ExercisePicker } from "@/components/exercise-picker";
+import { RestTimer } from "@/components/rest-timer";
+import { Button, EmptyState, Loading } from "@/components/ui";
+import { WorkoutExerciseCard } from "@/components/workout-exercise-card";
+import { useWorkoutChannel } from "@/hooks/use-workout-channel";
+import { colors, spacing } from "@/theme/colors";
+
+export default function WorkoutScreen() {
+  const router = useRouter();
+  const { data: workout, isLoading } = useActiveWorkout();
+  const startWorkout = useStartWorkout();
+  const finishWorkout = useFinishWorkout();
+  const deleteWorkout = useDeleteWorkout();
+  const addExercise = useAddWorkoutExercise();
+  const { liveRep, connected } = useWorkoutChannel(workout?.id);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const clearRest = useCallback(() => setRestEndsAt(null), []);
+
+  if (isLoading) return <Loading />;
+
+  if (!workout) {
+    return (
+      <View style={styles.emptyContainer}>
+        <EmptyState
+          title="No active workout"
+          subtitle="Start fresh or pick a routine to pre-load your exercises."
+        />
+        <Button
+          title="Start empty workout"
+          onPress={() => startWorkout.mutate({})}
+          loading={startWorkout.isPending}
+        />
+        <View style={{ height: spacing.sm }} />
+        <Button
+          title="Choose a routine"
+          variant="secondary"
+          onPress={() => router.navigate("/routines")}
+        />
+      </View>
+    );
+  }
+
+  const confirmFinish = () => {
+    const totalSets = workout.exercises.reduce((n, we) => n + we.sets.length, 0);
+    if (totalSets === 0) {
+      Alert.alert("Discard workout?", "No sets logged — this will delete the session.", [
+        { text: "Keep going", style: "cancel" },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: () => deleteWorkout.mutate(workout.id),
+        },
+      ]);
+      return;
+    }
+    finishWorkout.mutate(workout.id);
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.topRow}>
+          <Text style={styles.title}>
+            {new Date(workout.started_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            session
+          </Text>
+          <Text style={[styles.wsDot, { color: connected ? colors.success : colors.textFaint }]}>
+            ● {connected ? "live" : "offline"}
+          </Text>
+        </View>
+
+        {restEndsAt ? <RestTimer endsAt={restEndsAt} onDone={clearRest} /> : null}
+
+        {workout.exercises.map((we) => (
+          <WorkoutExerciseCard
+            key={we.id}
+            workoutId={workout.id}
+            we={we}
+            liveRepCount={
+              liveRep && liveRep.exerciseId === we.exercise.id ? liveRep.count : undefined
+            }
+            onSetLogged={(rest) => setRestEndsAt(Date.now() + rest * 1000)}
+          />
+        ))}
+
+        <Button title="+ Add exercise" variant="secondary" onPress={() => setPickerOpen(true)} />
+        <View style={{ height: spacing.sm }} />
+        <Button title="Finish workout" onPress={confirmFinish} loading={finishWorkout.isPending} />
+      </ScrollView>
+
+      <ExercisePicker
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={(exercise) => {
+          setPickerOpen(false);
+          addExercise.mutate({ workoutId: workout.id, exerciseId: exercise.id });
+        }}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: { padding: spacing.md, paddingBottom: spacing.xl },
+  emptyContainer: { flex: 1, backgroundColor: colors.bg, justifyContent: "center", padding: spacing.lg },
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  title: { color: colors.text, fontSize: 18, fontWeight: "800" },
+  wsDot: { fontSize: 12, fontWeight: "700" },
+});

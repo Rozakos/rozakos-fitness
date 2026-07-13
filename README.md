@@ -1,0 +1,89 @@
+# Rozakos Fitness
+
+A workout-tracking app in the spirit of **Tracked / Strong / Hevy**, with a twist: a
+first-class device API so embedded projects (e.g. a Raspberry Pi with a camera) can count
+your reps and stream them live into your workout.
+
+Built to match the [rozakos.com](https://rozakos.com) brand: dark charcoal (`#2c2c3e`),
+crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — then lift them.
+
+## What's inside
+
+| Part | Stack | Path |
+|---|---|---|
+| API server | Python, FastAPI, SQLAlchemy, SQLite | `backend/` |
+| Mobile app | React Native, Expo, TypeScript | `mobile/` |
+| Device examples | Python (requests + websockets) | `examples/` |
+
+### Features (v1 — the Tracked strength-training core)
+
+- Workout logging: weight, reps, RPE, warm-up sets, supersets, swap/reorder mid-session
+- Routines/templates with target sets × rep ranges
+- Exercise library (~60 seeded) + custom exercises, with per-exercise history
+  ("last time" ghost values on every set row)
+- Progress: per-rep-count PRs, estimated-1RM trend (Epley), weekly volume per muscle group
+- Bodyweight tracking with trend
+- Rest timer with per-exercise defaults
+- **Device API**: per-user API keys; devices log sets over REST or stream live reps over
+  WebSocket into the active workout
+
+## Quick start
+
+### Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --reload
+```
+
+- Interactive API docs: http://localhost:8000/docs
+- The database (`fitness.db`) is created and seeded with exercises on first start.
+- Run tests: `pytest`
+
+### Mobile app
+
+```bash
+cd mobile
+npm install
+npx expo start
+```
+
+Scan the QR code with **Expo Go** on your phone. The phone must reach your dev machine —
+set the API base URL to your LAN IP (see `mobile/src/api/config.ts`).
+
+### Try the device flow (no hardware needed)
+
+1. In the app: **Profile → Devices → Add device** — copy the `rzk_...` key (shown once).
+2. Start a workout on your phone.
+3. Run the simulated Raspi rep counter:
+
+```bash
+pip install requests websockets
+python examples/raspi_rep_counter.py --server http://<your-lan-ip>:8000 --api-key rzk_... --exercise-id 1 --weight 60
+```
+
+Watch reps tick live on the workout screen; completed sets are logged with a device badge.
+
+## Device API in 30 seconds
+
+```
+POST /devices                      (JWT)      -> create API key, plaintext returned once
+GET  /device/active-workout        (X-API-Key) -> {"active": true, "workout_id": 7}
+POST /device/sets                  (X-API-Key) -> log a completed set into the active workout
+WS   /ws/workout/{id}?api_key=...              -> stream {"type":"rep",...} and
+                                                  {"type":"set_complete",...} events
+```
+
+`set_complete` messages are persisted server-side and broadcast to the phone as
+`set_logged` — no polling needed.
+
+## Configuration
+
+Backend settings via environment variables (prefix `ROZAKOS_`) or `backend/.env`:
+
+| Variable | Default | Notes |
+|---|---|---|
+| `ROZAKOS_DATABASE_URL` | `sqlite:///./fitness.db` | Any SQLAlchemy URL; Postgres is a drop-in |
+| `ROZAKOS_SECRET_KEY` | dev value | **Change in production** |
+| `ROZAKOS_ACCESS_TOKEN_EXPIRE_MINUTES` | 10080 (7 days) | |

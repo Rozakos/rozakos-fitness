@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/*.db
+
+# Node / Expo (mobile/ has its own .gitignore from the template)
+node_modules/
+
+# Env
+.env
