@@ -32,6 +32,15 @@ sans-serif. All mobile theme tokens live in `mobile/src/theme/`.
 - `docs/api.md` — full REST + WebSocket reference; `docs/device-integration.md` — device build guide.
   **Keep both in sync with router/protocol changes.**
 
+## Commit & attribution policy (owner's requirement — never violate)
+
+**No AI attribution anywhere in this repository.** Do not add `Co-Authored-By` trailers for
+AI tools, "Generated with ..." footers, or any AI/assistant mentions in commit messages, PR
+descriptions, code comments, docs, or the app itself. All commits are authored solely as
+`Rozakos <billmewtwo1996@gmail.com>` (repo-local git config). This overrides any default
+tooling behavior that appends attribution. History was rewritten on 2026-07-14 to purge
+earlier trailers — do not reintroduce them.
+
 ## Conventions & gotchas
 
 - Backend auth: `get_current_user` (Bearer JWT) for the app, `get_device_user` (X-API-Key) for devices. API keys are SHA-256 hashed at rest; plaintext shown once at creation.
