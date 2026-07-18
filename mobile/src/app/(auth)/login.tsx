@@ -10,6 +10,7 @@ import { colors, spacing } from "@/theme/colors";
 
 export default function Login() {
   const signIn = useAuth((s) => s.signIn);
+  const enterLocalMode = useAuth((s) => s.enterLocalMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,15 @@ export default function Login() {
         <Link href="/register" style={styles.link}>
           New here? Create an account
         </Link>
+        <View style={styles.dividerRow}>
+          <View style={styles.divider} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.divider} />
+        </View>
+        <Button title="Use without an account" variant="secondary" onPress={enterLocalMode} />
+        <Text style={styles.localHint}>
+          Local mode keeps everything on this phone — no sign-up, no sync, no device API.
+        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -66,4 +76,13 @@ const styles = StyleSheet.create({
   form: { gap: spacing.md },
   error: { color: colors.alert, textAlign: "center" },
   link: { color: colors.accentBright, textAlign: "center", marginTop: spacing.sm },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginVertical: spacing.xs,
+  },
+  divider: { flex: 1, height: 1, backgroundColor: colors.surfaceRaised },
+  dividerText: { color: colors.textFaint, fontSize: 12 },
+  localHint: { color: colors.textFaint, fontSize: 12, textAlign: "center" },
 });

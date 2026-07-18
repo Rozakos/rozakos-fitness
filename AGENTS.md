@@ -25,7 +25,7 @@ sans-serif. All mobile theme tokens live in `mobile/src/theme/`.
   - `app/models.py` — User, ApiKey, Exercise, Routine(+Exercise), Workout(+Exercise), WorkoutSet, BodyweightEntry
   - `app/routers/` — auth (JWT), exercises, routines, workouts, stats, bodyweight, devices
   - `app/live.py` — WebSocket hub `/ws/workout/{id}` (phone: `?token=JWT`, device: `?api_key=rzk_...`)
-  - `app/seed.py` — ~60 built-in exercises, seeded on startup
+  - `app/seed.py` — ~250 built-in exercises, seeded on startup (kept in sync with mobile/src/local/catalog.ts)
   - `tests/` — pytest; run with `cd backend && python -m pytest tests -q`
 - `mobile/` — Expo (React Native, TypeScript, expo-router). State: React Query (server) + zustand (active workout). Charts: react-native-gifted-charts.
 - `examples/raspi_rep_counter.py` — simulated device client; `raspi_camera_mediapipe.py` — real CV one.

@@ -1,20 +1,16 @@
+import { localApi } from "../local/api";
 import { useAuth } from "../store/auth";
 import { API_URL } from "./config";
+import { ApiError } from "./error";
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    detail: string,
-  ) {
-    super(detail);
-  }
-}
+export { ApiError } from "./error";
 
 export async function api<T>(
   path: string,
   options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
-  const token = useAuth.getState().token;
+  const { token, localMode } = useAuth.getState();
+  if (localMode) return localApi<T>(path, options);
   const res = await fetch(`${API_URL}${path}`, {
     method: options.method ?? "GET",
     headers: {

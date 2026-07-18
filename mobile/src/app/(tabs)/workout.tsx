@@ -16,10 +16,12 @@ import { RestTimer } from "@/components/rest-timer";
 import { Button, EmptyState, Input, Loading } from "@/components/ui";
 import { WorkoutExerciseCard } from "@/components/workout-exercise-card";
 import { useWorkoutChannel } from "@/hooks/use-workout-channel";
+import { useAuth } from "@/store/auth";
 import { colors, spacing } from "@/theme/colors";
 
 export default function WorkoutScreen() {
   const router = useRouter();
+  const localMode = useAuth((s) => s.localMode);
   const { data: workout, isLoading } = useActiveWorkout();
   const startWorkout = useStartWorkout();
   const finishWorkout = useFinishWorkout();
@@ -104,9 +106,11 @@ export default function WorkoutScreen() {
             })}{" "}
             session
           </Text>
-          <Text style={[styles.wsDot, { color: connected ? colors.success : colors.textFaint }]}>
-            ● {connected ? "live" : "offline"}
-          </Text>
+          {localMode ? null : (
+            <Text style={[styles.wsDot, { color: connected ? colors.success : colors.textFaint }]}>
+              ● {connected ? "live" : "offline"}
+            </Text>
+          )}
         </View>
 
         {restEndsAt ? (

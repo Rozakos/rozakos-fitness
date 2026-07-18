@@ -10,7 +10,7 @@ import { colors, radius, spacing } from "@/theme/colors";
 
 export default function Profile() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, localMode, signOut } = useAuth();
   const { width } = useWindowDimensions();
   const { data: volume } = useWeeklyVolume(12);
   const { data: bodyweight } = useBodyweight();
@@ -40,8 +40,10 @@ export default function Profile() {
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl }}
     >
-      <Text style={styles.name}>{user?.display_name}</Text>
-      <Text style={styles.muted}>{user?.email}</Text>
+      <Text style={styles.name}>{localMode ? "Local mode" : user?.display_name}</Text>
+      <Text style={styles.muted}>
+        {localMode ? "No account — data stays on this phone" : user?.email}
+      </Text>
 
       <SectionTitle>Settings</SectionTitle>
       <View style={styles.unitRow}>
@@ -103,16 +105,34 @@ export default function Profile() {
       </Card>
 
       <SectionTitle>Devices</SectionTitle>
-      <Button
-        title="Manage devices & API keys"
-        variant="secondary"
-        onPress={() => router.navigate("/devices")}
-      />
-      <Text style={styles.deviceHint}>
-        Connect a Raspberry Pi rep counter or other embedded gear via the Rozakos Fitness API.
-      </Text>
+      {localMode ? (
+        <Text style={styles.deviceHint}>
+          Embedded devices (like a Raspberry Pi rep counter) stream sets through the Rozakos
+          Fitness server, so they need an account. Local mode is on-phone only.
+        </Text>
+      ) : (
+        <>
+          <Button
+            title="Manage devices & API keys"
+            variant="secondary"
+            onPress={() => router.navigate("/devices")}
+          />
+          <Text style={styles.deviceHint}>
+            Connect a Raspberry Pi rep counter or other embedded gear via the Rozakos Fitness API.
+          </Text>
+        </>
+      )}
 
-      <Button title="Log out" variant="danger" onPress={signOut} />
+      <Button
+        title={localMode ? "Exit local mode" : "Log out"}
+        variant="danger"
+        onPress={signOut}
+      />
+      {localMode ? (
+        <Text style={styles.deviceHint}>
+          Exiting keeps your data on this phone — come back to local mode any time.
+        </Text>
+      ) : null}
     </ScrollView>
   );
 }

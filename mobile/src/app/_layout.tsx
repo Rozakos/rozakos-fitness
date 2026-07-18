@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { Loading } from "@/components/ui";
 import { useAuth } from "@/store/auth";
@@ -16,7 +16,8 @@ const queryClient = new QueryClient({
 });
 
 function AuthGate() {
-  const { token, hydrated, hydrate } = useAuth();
+  const { token, localMode, hydrated, hydrate } = useAuth();
+  const unlocked = !!token || localMode;
   const hydrateSettings = useSettings((s) => s.hydrate);
 
   useEffect(() => {
@@ -28,6 +29,16 @@ function AuthGate() {
     if (hydrated) SplashScreen.hideAsync();
   }, [hydrated]);
 
+  // Drop cached queries when switching between account and local mode so one
+  // mode's data never shows up in the other.
+  const sessionKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hydrated) return;
+    const key = `${token ?? ""}|${localMode}`;
+    if (sessionKey.current !== null && sessionKey.current !== key) queryClient.clear();
+    sessionKey.current = key;
+  }, [hydrated, token, localMode]);
+
   if (!hydrated) return <Loading />;
 
   return (
@@ -38,14 +49,14 @@ function AuthGate() {
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Protected guard={!!token}>
+      <Stack.Protected guard={unlocked}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="exercise/[id]" options={{ title: "Exercise" }} />
         <Stack.Screen name="routine/[id]" options={{ title: "Routine" }} />
         <Stack.Screen name="workout-summary/[id]" options={{ title: "Workout complete" }} />
         <Stack.Screen name="devices" options={{ title: "Devices" }} />
       </Stack.Protected>
-      <Stack.Protected guard={!token}>
+      <Stack.Protected guard={!unlocked}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack.Protected>
     </Stack>

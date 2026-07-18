@@ -6,10 +6,7 @@ import type { Exercise } from "@/api/types";
 import { Button, Input } from "@/components/ui";
 import { colors, radius, spacing } from "@/theme/colors";
 
-const MUSCLE_GROUPS = [
-  "chest", "back", "shoulders", "biceps", "triceps",
-  "quads", "hamstrings", "glutes", "calves", "core",
-];
+import { MUSCLE_GROUPS } from "@/local/catalog";
 
 export function ExercisePicker({
   visible,

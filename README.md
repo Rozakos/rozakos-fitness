@@ -22,11 +22,13 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
   session notes, kg/lb unit toggle, plate calculator
 - Routines/templates with target sets × rep ranges, double-progression hints in-session
 - Post-workout summary with duration, volume, and PR badges
-- Exercise library (~60 seeded) + custom exercises, with per-exercise history
+- Exercise library (~250 seeded) + custom exercises, with per-exercise history
   ("last time" ghost values on every set row)
 - Progress: per-rep-count PRs, estimated-1RM trend (Epley), weekly volume per muscle group
 - Bodyweight tracking with trend
 - Rest timer with per-exercise defaults
+- **Local-only mode**: skip sign-up entirely — everything is stored on the phone
+  (no account, no sync, no device API; the full built-in exercise catalog is bundled)
 - **Device API**: per-user API keys; devices log sets over REST or stream live reps over
   WebSocket into the active workout
 
