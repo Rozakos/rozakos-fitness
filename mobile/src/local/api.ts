@@ -468,7 +468,8 @@ export async function localApi<T>(
           if (seg.length === 5 && method === "POST") {
             const set: StoredSet = {
               id: nextId(db),
-              set_number: Math.max(0, ...we.sets.map((s) => s.set_number)) + 1,
+              set_number:
+                Math.max(0, ...we.sets.map((s) => s.set_number).filter(Number.isFinite)) + 1,
               reps: body.reps,
               weight_kg: body.weight_kg ?? 0,
               rpe: body.rpe ?? null,

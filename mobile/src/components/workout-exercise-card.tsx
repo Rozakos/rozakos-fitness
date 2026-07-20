@@ -99,10 +99,21 @@ export function WorkoutExerciseCard({
     (isBodyweight ? "0" : "");
   const effectiveReps = reps || (ghost ? String(ghost.reps) : "");
 
+  const parsedWeight = parseFloat(effectiveWeight.replace(",", "."));
+  const parsedReps = parseInt(effectiveReps, 10);
+  // The user must have actually entered something — the ghost/last-time values
+  // are a convenience (type just the weight, reuse last reps), never a full set
+  // logged from a completely blank row on a stray tap.
+  const userEntered = weight.trim() !== "" || reps.trim() !== "";
+  // Nothing valid to log yet (e.g. a brand-new exercise with no "last time"
+  // ghost to fall back on and an empty field). Drives the disabled state of the
+  // log button so a tap can't silently no-op.
+  const canLog = userEntered && !Number.isNaN(parsedWeight) && !Number.isNaN(parsedReps);
+
   const submit = () => {
-    const w = parseFloat(effectiveWeight.replace(",", "."));
-    const r = parseInt(effectiveReps, 10);
-    if (Number.isNaN(w) || Number.isNaN(r)) return;
+    if (!canLog) return;
+    const w = parsedWeight;
+    const r = parsedReps;
     const raw = intensity ? parseFloat(intensity.replace(",", ".")) : null;
     const rpeValue = raw !== null && !Number.isNaN(raw) ? displayToRpe(raw, intensityMode) : null;
     logSet.mutate(
@@ -208,8 +219,8 @@ export function WorkoutExerciseCard({
         />
         <Pressable
           onPress={submit}
-          disabled={logSet.isPending}
-          style={[styles.logButton, logSet.isPending && { opacity: 0.5 }]}
+          disabled={logSet.isPending || !canLog}
+          style={[styles.logButton, (logSet.isPending || !canLog) && { opacity: 0.5 }]}
         >
           <Ionicons name="checkmark" size={20} color={colors.text} />
         </Pressable>
