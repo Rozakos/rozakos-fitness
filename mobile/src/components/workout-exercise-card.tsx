@@ -89,10 +89,14 @@ export function WorkoutExerciseCard({
   const [warmup, setWarmup] = useState(false);
   const [platesOpen, setPlatesOpen] = useState(false);
 
+  // Bodyweight movements (leg raises, pull-ups, etc.) are logged with no load —
+  // an empty weight field means 0, not "invalid", so the set still submits.
+  const isBodyweight = we.exercise.equipment === "bodyweight";
   const effectiveWeight =
     weight ||
     (lastLogged ? String(fromKg(lastLogged.weight_kg, unit)) : "") ||
-    (ghost ? String(fromKg(ghost.weight_kg, unit)) : "");
+    (ghost ? String(fromKg(ghost.weight_kg, unit)) : "") ||
+    (isBodyweight ? "0" : "");
   const effectiveReps = reps || (ghost ? String(ghost.reps) : "");
 
   const submit = () => {
