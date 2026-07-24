@@ -97,7 +97,10 @@ export default function WorkoutScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={styles.content}>
+      {/* "handled" is essential here: with the default ("never") the tap that
+          dismisses the keyboard is swallowed by the ScrollView, so the first
+          press of a set's log button after typing reps/RPE does nothing. */}
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.topRow}>
           <Text style={styles.title}>
             {new Date(workout.started_at).toLocaleTimeString([], {

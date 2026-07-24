@@ -70,6 +70,8 @@ export function ExercisePicker({
           data={exercises ?? []}
           keyExtractor={(e) => String(e.id)}
           contentContainerStyle={{ paddingVertical: spacing.sm }}
+          // otherwise the first tap on a result only dismisses the search keyboard
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <Text style={[styles.muted, { textAlign: "center", marginTop: spacing.lg }]}>
               No matches.

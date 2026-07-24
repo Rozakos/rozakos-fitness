@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   useDeleteSet,
@@ -99,16 +99,20 @@ export function WorkoutExerciseCard({
     (isBodyweight ? "0" : "");
   const effectiveReps = reps || (ghost ? String(ghost.reps) : "");
 
-  const parsedWeight = parseFloat(effectiveWeight.replace(",", "."));
+  // Bodyweight movements (pull-ups, dips, planks) have nothing to type in the
+  // weight box, and a brand-new exercise has no "last time" value to fall back
+  // on — an empty weight means 0 kg, not "refuse to log".
+  const parsedWeight =
+    effectiveWeight.trim() === "" ? 0 : parseFloat(effectiveWeight.replace(",", "."));
   const parsedReps = parseInt(effectiveReps, 10);
   // The user must have actually entered something — the ghost/last-time values
   // are a convenience (type just the weight, reuse last reps), never a full set
   // logged from a completely blank row on a stray tap.
   const userEntered = weight.trim() !== "" || reps.trim() !== "";
   // Nothing valid to log yet (e.g. a brand-new exercise with no "last time"
-  // ghost to fall back on and an empty field). Drives the disabled state of the
-  // log button so a tap can't silently no-op.
-  const canLog = userEntered && !Number.isNaN(parsedWeight) && !Number.isNaN(parsedReps);
+  // ghost to fall back on and an empty reps field). Drives the disabled state of
+  // the log button so a tap can't silently no-op.
+  const canLog = userEntered && Number.isFinite(parsedWeight) && Number.isFinite(parsedReps);
 
   const submit = () => {
     if (!canLog) return;
@@ -126,6 +130,8 @@ export function WorkoutExerciseCard({
           setWarmup(false);
           onSetLogged(we.exercise.rest_seconds_default);
         },
+        onError: (err) =>
+          Alert.alert("Set not saved", err instanceof Error ? err.message : "Please try again."),
       },
     );
   };

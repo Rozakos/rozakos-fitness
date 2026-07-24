@@ -77,6 +77,17 @@ function serializeRoutine(db: LocalDB, r: StoredRoutine): Routine {
   };
 }
 
+/**
+ * Sets must be copied out of the store, never aliased. React Query's structural
+ * sharing short-circuits on `prev === next`, so handing back the same array we
+ * later `push` into makes an added set invisible: the query data keeps its old
+ * identity and no component re-renders (the set only surfaces on a screen that
+ * queries fresh, e.g. the post-workout summary).
+ */
+function copySets(sets: StoredSet[]): StoredSet[] {
+  return sets.map((s) => ({ ...s }));
+}
+
 function serializeWorkoutExercise(db: LocalDB, we: StoredWorkoutExercise): WorkoutExercise {
   return {
     id: we.id,
@@ -85,7 +96,7 @@ function serializeWorkoutExercise(db: LocalDB, we: StoredWorkoutExercise): Worko
     superset_group: we.superset_group,
     target_reps_min: we.target_reps_min,
     target_reps_max: we.target_reps_max,
-    sets: we.sets,
+    sets: copySets(we.sets),
   };
 }
 
@@ -184,7 +195,7 @@ function exerciseHistory(db: LocalDB, exerciseId: number, limit: number): Exerci
   for (const workout of finished) {
     for (const we of workout.exercises) {
       if (we.exercise_id !== exerciseId || we.sets.length === 0) continue;
-      entries.push({ workout_id: workout.id, date: workout.started_at, sets: we.sets });
+      entries.push({ workout_id: workout.id, date: workout.started_at, sets: copySets(we.sets) });
     }
     if (entries.length >= limit) break;
   }
@@ -479,7 +490,7 @@ export async function localApi<T>(
             };
             we.sets.push(set);
             saveDb();
-            return set;
+            return { ...set };
           }
           const set = we.sets.find((s) => s.id === Number(seg[5])) ?? notFound("Set");
           if (method === "PATCH") {
@@ -488,7 +499,7 @@ export async function localApi<T>(
             if ("rpe" in body) set.rpe = body.rpe;
             if ("is_warmup" in body) set.is_warmup = body.is_warmup;
             saveDb();
-            return set;
+            return { ...set };
           }
           if (method === "DELETE") {
             we.sets = we.sets.filter((s) => s.id !== set.id);
