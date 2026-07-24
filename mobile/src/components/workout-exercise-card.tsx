@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
+  useBodyweight,
   useDeleteSet,
   useExerciseHistory,
   useLogSet,
@@ -68,6 +69,7 @@ export function WorkoutExerciseCard({
   liveRepCount?: number;
 }) {
   const { data: history } = useExerciseHistory(we.exercise.id, 1);
+  const { data: bodyweightLog } = useBodyweight();
   const logSet = useLogSet();
   const removeExercise = useRemoveWorkoutExercise();
   const { unit, intensityMode } = useSettings();
@@ -88,23 +90,39 @@ export function WorkoutExerciseCard({
   const [intensity, setIntensity] = useState("");
   const [warmup, setWarmup] = useState(false);
   const [platesOpen, setPlatesOpen] = useState(false);
+  const [addedSign, setAddedSign] = useState<1 | -1>(1);
 
-  // Bodyweight movements (leg raises, pull-ups, etc.) are logged with no load —
-  // an empty weight field means 0, not "invalid", so the set still submits.
+  // For bodyweight movements the weight box means *added* load, not total: blank
+  // is a plain set, positive is a dip belt / weight vest, negative is assistance
+  // (band, assisted pull-up machine). The set still stores the real total so
+  // volume, PRs and est-1RM stay comparable with loaded lifts. A previous
+  // session's total must therefore never be prefilled into the box.
   const isBodyweight = we.exercise.equipment === "bodyweight";
-  const effectiveWeight =
-    weight ||
-    (lastLogged ? String(fromKg(lastLogged.weight_kg, unit)) : "") ||
-    (ghost ? String(fromKg(ghost.weight_kg, unit)) : "") ||
-    (isBodyweight ? "0" : "");
+  const bodyweightKg = bodyweightLog?.[0]?.weight_kg ?? null;
+
+  const effectiveWeight = isBodyweight
+    ? weight
+    : weight ||
+      (lastLogged ? String(fromKg(lastLogged.weight_kg, unit)) : "") ||
+      (ghost ? String(fromKg(ghost.weight_kg, unit)) : "");
   const effectiveReps = reps || (ghost ? String(ghost.reps) : "");
 
-  // Bodyweight movements (pull-ups, dips, planks) have nothing to type in the
-  // weight box, and a brand-new exercise has no "last time" value to fall back
-  // on — an empty weight means 0 kg, not "refuse to log".
-  const parsedWeight =
-    effectiveWeight.trim() === "" ? 0 : parseFloat(effectiveWeight.replace(",", "."));
+  // An empty box is 0 added load for bodyweight work, but stays "nothing to log"
+  // for loaded lifts with no last-time value to fall back on.
+  const enteredWeight =
+    effectiveWeight.trim() === ""
+      ? isBodyweight
+        ? 0
+        : NaN
+      : parseFloat(effectiveWeight.replace(",", "."));
   const parsedReps = parseInt(effectiveReps, 10);
+
+  // decimal-pad has no minus key, so assistance is entered via the ± toggle.
+  const addedKg = isBodyweight ? toKg(enteredWeight * addedSign, unit) : 0;
+  const totalKg = isBodyweight
+    ? Math.max(0, Math.round(((bodyweightKg ?? 0) + addedKg) * 100) / 100)
+    : toKg(enteredWeight, unit);
+
   // The user must have actually entered something — the ghost/last-time values
   // are a convenience (type just the weight, reuse last reps), never a full set
   // logged from a completely blank row on a stray tap.
@@ -112,16 +130,15 @@ export function WorkoutExerciseCard({
   // Nothing valid to log yet (e.g. a brand-new exercise with no "last time"
   // ghost to fall back on and an empty reps field). Drives the disabled state of
   // the log button so a tap can't silently no-op.
-  const canLog = userEntered && Number.isFinite(parsedWeight) && Number.isFinite(parsedReps);
+  const canLog = userEntered && Number.isFinite(enteredWeight) && Number.isFinite(parsedReps);
 
   const submit = () => {
     if (!canLog) return;
-    const w = parsedWeight;
     const r = parsedReps;
     const raw = intensity ? parseFloat(intensity.replace(",", ".")) : null;
     const rpeValue = raw !== null && !Number.isNaN(raw) ? displayToRpe(raw, intensityMode) : null;
     logSet.mutate(
-      { workoutId, weId: we.id, weight_kg: toKg(w, unit), reps: r, rpe: rpeValue, is_warmup: warmup },
+      { workoutId, weId: we.id, weight_kg: totalKg, reps: r, rpe: rpeValue, is_warmup: warmup },
       {
         onSuccess: () => {
           setWeight("");
@@ -194,8 +211,24 @@ export function WorkoutExerciseCard({
             W
           </Text>
         </Pressable>
+        {isBodyweight ? (
+          <Pressable
+            onPress={() => setAddedSign(addedSign === 1 ? -1 : 1)}
+            style={styles.signToggle}
+            hitSlop={4}
+          >
+            <Text
+              style={{
+                color: addedSign === -1 ? colors.alert : colors.textMuted,
+                fontWeight: "800",
+              }}
+            >
+              {addedSign === -1 ? "−" : "+"}
+            </Text>
+          </Pressable>
+        ) : null}
         <Input
-          placeholder={ghost ? String(fromKg(ghost.weight_kg, unit)) : unit}
+          placeholder={isBodyweight ? unit : ghost ? String(fromKg(ghost.weight_kg, unit)) : unit}
           keyboardType="decimal-pad"
           value={weight}
           onChangeText={setWeight}
@@ -232,9 +265,19 @@ export function WorkoutExerciseCard({
         </Pressable>
       </View>
 
+      {isBodyweight ? (
+        <Text style={styles.bodyweightHint}>
+          {bodyweightKg == null
+            ? "Log your bodyweight in Profile so these sets count toward volume and PRs."
+            : `${addedSign === -1 ? "assisted" : "added"} load · logs ${fromKg(totalKg, unit)} ${unit} ` +
+              `(bodyweight ${fromKg(bodyweightKg, unit)})`}
+        </Text>
+      ) : null}
+
       <PlateCalculator
         visible={platesOpen}
-        weight={parseFloat(effectiveWeight.replace(",", ".")) || 0}
+        // a dip belt / weight vest is loaded with the added weight, not the total
+        weight={(isBodyweight ? fromKg(Math.abs(addedKg), unit) : parseFloat(effectiveWeight.replace(",", "."))) || 0}
         unit={unit}
         onClose={() => setPlatesOpen(false)}
       />
@@ -289,6 +332,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  signToggle: {
+    width: 24,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceRaised,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bodyweightHint: { color: colors.textFaint, fontSize: 11, marginTop: spacing.xs },
   input: { flex: 1, paddingVertical: 8, textAlign: "center" },
   logButton: {
     backgroundColor: colors.accent,
