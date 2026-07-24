@@ -13,14 +13,19 @@ function BarButton({ label, onPress }: { label: string; onPress: () => void }) {
 
 export function RestTimer({
   endsAt,
+  durationMs,
   onDone,
   onAdjust,
 }: {
   endsAt: number;
+  /** Full rest length, so the first frame is exact without reading the clock
+   *  during render — Date.now() there is impure and the React Compiler is right
+   *  to reject it. The interval below owns every value after that. */
+  durationMs: number;
   onDone: () => void;
   onAdjust: (deltaSeconds: number) => void;
 }) {
-  const [remaining, setRemaining] = useState(Math.max(0, endsAt - Date.now()));
+  const [remaining, setRemaining] = useState(durationMs);
 
   useEffect(() => {
     const interval = setInterval(() => {

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { RoutineExerciseInput, useDeleteRoutine, useRoutines, useSaveRoutine } from "@/api/hooks";
@@ -24,27 +24,29 @@ export default function RoutineEditor() {
   const [name, setName] = useState("");
   const [items, setItems] = useState<EditableExercise[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  const [loadedId, setLoadedId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (isNew || loaded || !routines) return;
-    const routine = routines.find((r) => r.id === Number(id));
-    if (routine) {
-      setName(routine.name);
-      setItems(
-        routine.exercises.map((re) => ({
-          exercise: re.exercise,
-          exercise_id: re.exercise.id,
-          order: re.order,
-          superset_group: re.superset_group,
-          target_sets: re.target_sets,
-          target_reps_min: re.target_reps_min,
-          target_reps_max: re.target_reps_max,
-        })),
-      );
-      setLoaded(true);
-    }
-  }, [isNew, loaded, routines, id]);
+  // Seed the editor from the fetched routine as soon as it arrives. Done during
+  // render (React's "adjust state when data changes" pattern) rather than in an
+  // effect: an effect would commit the empty form first and cascade a second
+  // render on top of it. The loadedId guard keeps it to once per routine, so
+  // later edits are never clobbered by a background refetch.
+  const routine = isNew ? undefined : routines?.find((r) => r.id === Number(id));
+  if (routine && loadedId !== routine.id) {
+    setLoadedId(routine.id);
+    setName(routine.name);
+    setItems(
+      routine.exercises.map((re) => ({
+        exercise: re.exercise,
+        exercise_id: re.exercise.id,
+        order: re.order,
+        superset_group: re.superset_group,
+        target_sets: re.target_sets,
+        target_reps_min: re.target_reps_min,
+        target_reps_max: re.target_reps_max,
+      })),
+    );
+  }
 
   const updateItem = (index: number, patch: Partial<RoutineExerciseInput>) => {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));

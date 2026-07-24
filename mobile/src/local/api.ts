@@ -304,14 +304,13 @@ function buildRoutineExercises(db: LocalDB, exercises: RoutineExerciseBody[]) {
 
 // --- router ---
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function localApi<T>(
   path: string,
   options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
   const db = loadDb();
   const method = options.method ?? "GET";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // request bodies are free-form JSON, shaped per route below
   const body = (options.body ?? {}) as any;
   const [pathname, query = ""] = path.split("?");
   const params = new URLSearchParams(query);

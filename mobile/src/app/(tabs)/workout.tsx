@@ -33,14 +33,16 @@ export default function WorkoutScreen() {
 
   // picker either adds a new exercise or swaps the movement of an existing one
   const [pickerTarget, setPickerTarget] = useState<"add" | number | null>(null);
-  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const [rest, setRest] = useState<{ endsAt: number; durationMs: number } | null>(null);
   const [notes, setNotes] = useState<string | null>(null);
-  const clearRest = useCallback(() => setRestEndsAt(null), []);
+  const clearRest = useCallback(() => setRest(null), []);
   const adjustRest = useCallback((delta: number) => {
-    setRestEndsAt((prev) => {
+    // read the clock here, not inside the updater — updaters must stay pure
+    const now = Date.now();
+    setRest((prev) => {
       if (prev === null) return prev;
-      const next = Math.max(Date.now(), prev + delta * 1000);
-      return next <= Date.now() ? null : next;
+      const endsAt = Math.max(now, prev.endsAt + delta * 1000);
+      return endsAt <= now ? null : { ...prev, endsAt };
     });
   }, []);
 
@@ -116,8 +118,13 @@ export default function WorkoutScreen() {
           )}
         </View>
 
-        {restEndsAt ? (
-          <RestTimer endsAt={restEndsAt} onDone={clearRest} onAdjust={adjustRest} />
+        {rest ? (
+          <RestTimer
+            endsAt={rest.endsAt}
+            durationMs={rest.durationMs}
+            onDone={clearRest}
+            onAdjust={adjustRest}
+          />
         ) : null}
 
         <Input
@@ -141,7 +148,9 @@ export default function WorkoutScreen() {
             liveRepCount={
               liveRep && liveRep.exerciseId === we.exercise.id ? liveRep.count : undefined
             }
-            onSetLogged={(rest) => setRestEndsAt(Date.now() + rest * 1000)}
+            onSetLogged={(seconds) =>
+              setRest({ endsAt: Date.now() + seconds * 1000, durationMs: seconds * 1000 })
+            }
             onSwap={() => setPickerTarget(we.id)}
             onMove={(direction) => moveExercise(index, direction)}
           />

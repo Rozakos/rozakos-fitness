@@ -7,9 +7,11 @@ import { colors } from "@/theme/colors";
 type IconName = keyof typeof Ionicons.glyphMap;
 
 function icon(name: IconName) {
-  return ({ color, size }: { color: ColorValue; size: number }) => (
+  const TabBarIcon = ({ color, size }: { color: ColorValue; size: number }) => (
     <Ionicons name={name} color={color} size={size} />
   );
+  TabBarIcon.displayName = `TabBarIcon(${name})`;
+  return TabBarIcon;
 }
 
 export default function TabsLayout() {

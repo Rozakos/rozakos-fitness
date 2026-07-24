@@ -79,6 +79,7 @@ let cache: LocalDB | null = null;
 function readRaw(): string | null {
   if (Platform.OS === "web") return globalThis.localStorage?.getItem(WEB_KEY) ?? null;
   // Required lazily so the native module never loads on web.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { File, Paths } = require("expo-file-system") as typeof import("expo-file-system");
   const file = new File(Paths.document, FILE_NAME);
   return file.exists ? file.textSync() : null;
@@ -89,6 +90,7 @@ function writeRaw(json: string): void {
     globalThis.localStorage?.setItem(WEB_KEY, json);
     return;
   }
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { File, Paths } = require("expo-file-system") as typeof import("expo-file-system");
   const file = new File(Paths.document, FILE_NAME);
   if (!file.exists) file.create();
