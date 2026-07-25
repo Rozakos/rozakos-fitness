@@ -48,6 +48,11 @@ requests.post(
 If the exercise isn't in the session yet, the server adds it. A `409` means the workout
 ended — go back to step 2.
 
+`weight_kg` is the **total load moved**. For a bodyweight exercise (pull-ups, dips, push-ups)
+that means the lifter's bodyweight plus anything added, not `0` — the phone app applies this
+rule itself, and a device that sends `0` will have those sets ignored by volume and PR stats.
+Fetch it from `GET /bodyweight` (newest entry first) if your device logs bodyweight movements.
+
 ## 3b. Full integration: live WebSocket
 
 Connect to the workout's room and stream individual reps as they happen; the lifter sees a

@@ -51,6 +51,42 @@ earlier trailers — do not reintroduce them.
 - Settings via `pydantic-settings`, env prefix `ROZAKOS_` (see `backend/app/config.py`).
 - Windows dev box; Node.js installed at `C:\Program Files\nodejs` (may need adding to PATH in fresh shells).
 
+### Mobile invariants (each of these has already caused a user-visible bug)
+
+- **Never hand a stored array or object straight out of `local/api.ts`.** React Query's structural
+  sharing starts with `if (a === b) return a`, so returning the same `sets` array that the
+  set-logging route later `push`es into makes the query data keep its old identity — nothing
+  re-renders, and with the React Compiler memoizing components on their props the new set stays
+  invisible until some other screen queries fresh. Serialize through a copy (`copySets`).
+  Reassignment (`we.sets = we.sets.filter(...)`) is safe; in-place mutation is not.
+- **`experiments.reactCompiler` is on.** Components must be pure: no `Date.now()`, `Math.random()`
+  or other impure reads during render (that is why `RestTimer` takes `durationMs` instead of
+  seeding state from the clock), and no `setState` synchronously inside an effect — seed state
+  during render with a guard instead (see `app/routine/[id].tsx`).
+- **Scroll containers with text inputs need `keyboardShouldPersistTaps="handled"`** or the first
+  tap on any button is eaten by the keyboard dismissal.
+- **Bodyweight exercises** (`exercise.equipment === "bodyweight"`, 52 of the catalog): the weight
+  box means *added* load — blank is a plain set, positive is a dip belt, negative is assistance
+  entered via the ± toggle (`decimal-pad` has no minus key). The set stores the real total
+  (latest tracked bodyweight + added, floored at 0) so volume, PRs and est-1RM stay comparable
+  with loaded lifts. With no bodyweight entry logged, only the added load is stored.
+- **Keep `npx expo lint` and `npx tsc --noEmit` clean** — both pass as of v1.6.
+
+### Android release build (this machine)
+
+- JDK 17 at `C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot` (`JAVA_HOME`); SDK at
+  `%LOCALAPPDATA%\Android\Sdk`, not on PATH.
+- **Build from `C:\rfb`, never the repo path.** `C:\rfb` is a robocopy of `mobile/` with its own
+  `npm ci`; building in place fails with `ninja: error: manifest 'build.ninja' still dirty after
+  100 tries` because object paths in expo-modules-core / react-native-reanimated exceed CMake's
+  250-char Windows limit. A junction does not help — Gradle canonicalizes it away.
+- Sync then build: `robocopy mobile\src C:\rfb\src /MIR`, then
+  `cd C:\rfb\android && gradlew assembleRelease --no-daemon` (~1 min incremental, ~11 min cold).
+  APK lands at `android\app\build\outputs\apk\release\app-release.apk`, debug-keystore signed.
+- Install: `adb install -r <apk>`. The owner's cable drops mid-transfer often — if it fails
+  partway, `adb wait-for-device` and retry; it usually succeeds on the second attempt.
+- Release APKs are copied to the repo root as `rozakos-fitness-vX.Y.apk` and are gitignored.
+
 ## Status (2026-07-13)
 
 - [x] Backend: models, auth, exercises+seed, routines, workouts/sets/supersets, stats, bodyweight, device API keys, WebSocket live hub
@@ -72,13 +108,42 @@ earlier trailers — do not reintroduce them.
   (`workout-summary/[id]`), RPE-or-RIR setting (server stores RPE only; RIR = 10 − RPE at the UI
   boundary), double-progression hint (targets copied from routine onto WorkoutExercise —
   **schema change: delete stale dev fitness.db, create_all won't add columns**), plate calculator
-- [ ] Not yet verified on a physical phone via Expo Go (no emulator on this box)
+- [x] v1.3 (2026-07-20): local-only mode — the whole REST surface reimplemented on-phone in
+  `mobile/src/local/api.ts` against a JSON document (`local/db.ts`), so the app works with no
+  account and no server; full ~250-exercise built-in catalog (`local/catalog.ts`, kept in exact
+  sync with `backend/app/seed.py` — enforced by `backend/tests/test_catalog_sync.py`)
+- [x] v1.4 (2026-07-20): set-logging hardening — log button disabled when there is nothing valid
+  to log, `set_number` guarded against non-finite stored values
+- [x] v1.6 (2026-07-25): fixed sets not appearing until the workout was finished (three separate
+  causes, see below), bodyweight sets now store bodyweight ± added load, eslint set up and clean
+- [x] Built and installed as a release APK on the owner's phone (Galaxy Z Flip3) — see the
+  Android build recipe below. Never smoke-tested via Expo Go, which is fine; the APK is the
+  delivery path.
+- [ ] **v1.6 is installed but not runtime-verified.** No test runner exists in `mobile/`, so the
+  bodyweight math, the ± toggle, the rest timer's new `durationMs` first frame, and the routine
+  editor's render-time seeding have only been typechecked and linted. Ask the owner what they saw.
 - [ ] MediaPipe client untested on real hardware (no camera here); angle thresholds need calibration
+
+## The v1.6 set-logging fix (2026-07-25) — three independent causes
+
+Worth knowing because each one is easy to reintroduce:
+
+1. **Swallowed taps.** A React Native `ScrollView`/`FlatList` defaults to
+   `keyboardShouldPersistTaps="never"`, so with the keyboard up the tap that dismisses it never
+   reaches the child. The log button therefore did nothing on first press. Any scroll container
+   holding a text input **must** set `keyboardShouldPersistTaps="handled"`.
+2. **Bodyweight exercises could not be logged at all.** An empty weight box parsed to `NaN` and
+   kept the button permanently disabled.
+3. **The set saved but nothing re-rendered.** See the local-mode aliasing rule under Conventions.
 
 ## Next steps when picking up
 
-1. On-phone smoke test: `uvicorn app.main:app --host 0.0.0.0` + `npx expo start`, scan QR with Expo Go.
-2. Test `examples/raspi_camera_mediapipe.py` on the Pi with a camera; calibrate --angle-low/high per movement.
-3. Candidate v1.3 items: programs with phases/roadmaps, bodyweight-relative PRs, trend smoothing,
-   HealthKit/Health Connect, import from Strong/Hevy CSV. Nutrition/AI/social remain deliberately out of scope.
-4. Keep this Status section updated as work progresses.
+1. Ask the owner how v1.6 behaved on the phone (the unchecked item above) before building on top.
+2. **Bodyweight totals are computed client-side only** (`workout-exercise-card.tsx`): the phone
+   sends `weight_kg = bodyweight + added`. A Raspi device logging via `POST /device/sets` against
+   a bodyweight exercise still sends raw weight, so those sets under-report volume/PRs. Decide
+   whether to move the rule into `backend/app/routers/stats.py` + `local/api.ts` instead.
+3. Test `examples/raspi_camera_mediapipe.py` on the Pi with a camera; calibrate --angle-low/high.
+4. Candidate items: programs with phases/roadmaps, trend smoothing, HealthKit/Health Connect,
+   import from Strong/Hevy CSV. Nutrition/AI/social remain deliberately out of scope.
+5. Keep this Status section updated as work progresses.

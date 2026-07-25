@@ -64,6 +64,14 @@ Only **one active workout** (`finished_at == null`) per user — starting a seco
 The API stores intensity as **RPE (1–10)** only. The app's RIR mode converts at the
 UI boundary (`RIR = 10 − RPE`).
 
+`weight_kg` is always the **total load moved**, so volume (`reps × weight_kg`), PRs and
+est-1RM stay comparable across exercises. For exercises with `equipment == "bodyweight"`
+the phone app computes that total itself — the user types *added* load (a dip belt, or a
+negative value for band/machine assistance) and the app sends
+`latest tracked bodyweight + added`, floored at 0. The server does not apply this rule, so
+**a device client logging a bodyweight exercise should send the same total**; sending the
+bare added weight (or 0) makes those sets vanish from volume and PR stats.
+
 ## Stats & bodyweight
 
 | Method & path | Returns |

@@ -25,7 +25,8 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 - Exercise library (~250 seeded) + custom exercises, with per-exercise history
   ("last time" ghost values on every set row)
 - Progress: per-rep-count PRs, estimated-1RM trend (Epley), weekly volume per muscle group
-- Bodyweight tracking with trend
+- Bodyweight tracking with trend — bodyweight exercises log your bodyweight ± added load
+  (dip belt, or band/machine assistance), so pull-ups count toward volume and PRs like any lift
 - Rest timer with per-exercise defaults
 - **Local-only mode**: skip sign-up entirely — everything is stored on the phone
   (no account, no sync, no device API; the full built-in exercise catalog is bundled)
