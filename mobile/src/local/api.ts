@@ -38,16 +38,38 @@ const builtinExercises: Exercise[] = BUILTIN_EXERCISES.map(([name, muscle_group,
   equipment,
   rest_seconds_default: rest,
   is_custom: false,
+  video_url: null,
 }));
 
 function allExercises(db: LocalDB): Exercise[] {
   return [...builtinExercises, ...db.customExercises];
 }
 
+/**
+ * Every exercise leaves this module as a fresh object with its stored video link
+ * applied — the built-in catalog is a module constant that must never be mutated,
+ * and copying also keeps the no-aliasing rule (see `copySets`) for custom ones.
+ */
+function withVideo(db: LocalDB, exercise: Exercise): Exercise {
+  return { ...exercise, video_url: db.exerciseVideos[exercise.id] ?? null };
+}
+
 function getExercise(db: LocalDB, id: number): Exercise {
   const found = allExercises(db).find((e) => e.id === id);
   if (!found) throw new ApiError(404, "Exercise not found");
-  return found;
+  return withVideo(db, found);
+}
+
+/** Mirrors `_clean_video_url` in backend/app/schemas.py. */
+function cleanVideoUrl(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const url = String(value).trim();
+  if (!url) return null;
+  if (!/^https?:\/\//i.test(url)) {
+    throw new ApiError(422, "The link must start with http:// or https://");
+  }
+  if (url.length > 500) throw new ApiError(422, "That link is too long.");
+  return url;
 }
 
 function notFound(what: string): never {
@@ -181,9 +203,9 @@ function listExercises(db: LocalDB, params: URLSearchParams): Exercise[] {
   let list = allExercises(db);
   if (search) list = list.filter((e) => e.name.toLowerCase().includes(search));
   if (muscle) list = list.filter((e) => e.muscle_group === muscle);
-  return list.sort(
-    (a, b) => a.muscle_group.localeCompare(b.muscle_group) || a.name.localeCompare(b.name),
-  );
+  return list
+    .map((e) => withVideo(db, e))
+    .sort((a, b) => a.muscle_group.localeCompare(b.muscle_group) || a.name.localeCompare(b.name));
 }
 
 function exerciseHistory(db: LocalDB, exerciseId: number, limit: number): ExerciseHistoryEntry[] {
@@ -328,13 +350,26 @@ export async function localApi<T>(
           equipment: body.equipment ?? "barbell",
           rest_seconds_default: body.rest_seconds_default ?? 120,
           is_custom: true,
+          video_url: null,
         };
         db.customExercises.push(exercise);
+        const video = cleanVideoUrl(body.video_url);
+        if (video !== null) db.exerciseVideos[exercise.id] = video;
         saveDb();
-        return exercise;
+        return withVideo(db, exercise);
       }
       const exerciseId = Number(seg[1]);
       if (seg.length === 2 && method === "GET") return getExercise(db, exerciseId);
+      if (seg.length === 2 && method === "PATCH") {
+        getExercise(db, exerciseId); // 404s for an unknown id, as the backend does
+        if ("video_url" in body) {
+          const video = cleanVideoUrl(body.video_url);
+          if (video === null) delete db.exerciseVideos[exerciseId];
+          else db.exerciseVideos[exerciseId] = video;
+        }
+        saveDb();
+        return getExercise(db, exerciseId);
+      }
       if (seg[2] === "history" && method === "GET") {
         return exerciseHistory(db, exerciseId, Number(params.get("limit") ?? 10));
       }

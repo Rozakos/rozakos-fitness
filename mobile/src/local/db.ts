@@ -62,6 +62,12 @@ export interface LocalDB {
   routines: StoredRoutine[];
   workouts: StoredWorkout[];
   bodyweight: BodyweightEntry[];
+  /**
+   * exercise id → form-demo video URL, for built-in and custom exercises alike.
+   * Kept outside `customExercises` because the built-in catalog is a constant
+   * derived from `catalog.ts` and must stay immutable.
+   */
+  exerciseVideos: Record<number, string>;
 }
 
 // Built-in catalog ids are 1..N (list position); locally created entities
@@ -71,7 +77,14 @@ const FILE_NAME = "rozakos-local-db.json";
 const WEB_KEY = "rozakos_local_db";
 
 function emptyDb(): LocalDB {
-  return { nextId: FIRST_LOCAL_ID, customExercises: [], routines: [], workouts: [], bodyweight: [] };
+  return {
+    nextId: FIRST_LOCAL_ID,
+    customExercises: [],
+    routines: [],
+    workouts: [],
+    bodyweight: [],
+    exerciseVideos: {},
+  };
 }
 
 let cache: LocalDB | null = null;

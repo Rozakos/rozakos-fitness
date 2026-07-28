@@ -1,8 +1,9 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
-import { useExerciseHistory, useExerciseTrend, usePRs } from "@/api/hooks";
+import { useExercise, useExerciseHistory, useExerciseTrend, usePRs } from "@/api/hooks";
 import { TrendLine } from "@/components/charts";
+import { ExerciseVideoLink } from "@/components/exercise-video";
 import { Card, SectionTitle } from "@/components/ui";
 import { fromKg, rpeToDisplay, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
@@ -15,6 +16,7 @@ export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const exerciseId = Number(id);
   const { width } = useWindowDimensions();
+  const { data: exercise } = useExercise(exerciseId);
   const { data: trend } = useExerciseTrend(exerciseId);
   const { data: history } = useExerciseHistory(exerciseId, 10);
   const { data: prs } = usePRs();
@@ -27,8 +29,21 @@ export default function ExerciseDetail() {
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl }}
+      // the video link editor lives here, so the first tap on Save must land
+      keyboardShouldPersistTaps="handled"
     >
-      <Stack.Screen options={{ title: exercisePRs?.exercise.name ?? "Exercise" }} />
+      <Stack.Screen
+        options={{ title: exercise?.name ?? exercisePRs?.exercise.name ?? "Exercise" }}
+      />
+
+      <SectionTitle>How it&apos;s done</SectionTitle>
+      <Card>
+        {exercise ? (
+          <ExerciseVideoLink exercise={exercise} />
+        ) : (
+          <Text style={styles.muted}>Loading…</Text>
+        )}
+      </Card>
 
       <SectionTitle>Estimated 1RM (Epley)</SectionTitle>
       <Card>

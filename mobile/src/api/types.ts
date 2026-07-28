@@ -18,6 +18,8 @@ export interface Exercise {
   equipment: string;
   rest_seconds_default: number;
   is_custom: boolean;
+  /** Form-demo link (YouTube or any http(s) URL), opened by the info sheet. */
+  video_url: string | null;
 }
 
 export interface RoutineExercise {

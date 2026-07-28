@@ -4,7 +4,13 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Exercise, User, Workout, WorkoutExercise, WorkoutSet
-from ..schemas import ExerciseCreate, ExerciseHistoryEntry, ExerciseOut, SetOut
+from ..schemas import (
+    ExerciseCreate,
+    ExerciseHistoryEntry,
+    ExerciseOut,
+    ExerciseUpdate,
+    SetOut,
+)
 from ..security import get_current_user
 
 router = APIRouter(prefix="/exercises", tags=["exercises"])
@@ -58,6 +64,23 @@ def get_exercise(
     user: User = Depends(get_current_user),
 ):
     return get_visible_exercise(db, user, exercise_id)
+
+
+@router.patch("/{exercise_id}", response_model=ExerciseOut)
+def update_exercise(
+    exercise_id: int,
+    body: ExerciseUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Attach (or clear) the form-demo video link. Built-in exercises are shared
+    rows, so the link applies server-wide — intended for personal deployments."""
+    exercise = get_visible_exercise(db, user, exercise_id)
+    if "video_url" in body.model_fields_set:
+        exercise.video_url = body.video_url
+    db.commit()
+    db.refresh(exercise)
+    return exercise
 
 
 @router.get("/{exercise_id}/history", response_model=list[ExerciseHistoryEntry])

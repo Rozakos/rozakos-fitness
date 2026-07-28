@@ -48,6 +48,10 @@ class Exercise(Base):
     rest_seconds_default: Mapped[int] = mapped_column(Integer, default=120)
     is_custom: Mapped[bool] = mapped_column(Boolean, default=False)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    # form-demo link (YouTube or any http(s) URL), set from the app. Built-in
+    # exercises are shared rows, so a link on one is visible to every account on
+    # this server — fine for a personal deployment, see docs/api.md.
+    video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class Routine(Base):

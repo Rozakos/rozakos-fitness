@@ -70,19 +70,29 @@ earlier trailers — do not reintroduce them.
   entered via the ± toggle (`decimal-pad` has no minus key). The set stores the real total
   (latest tracked bodyweight + added, floored at 0) so volume, PRs and est-1RM stay comparable
   with loaded lifts. With no bodyweight entry logged, only the added load is stored.
-- **Keep `npx expo lint` and `npx tsc --noEmit` clean** — both pass as of v1.6.
+- **The target phone is a Galaxy Z Flip3** — a narrow, very tall screen that the owner reports
+  "scales a bit weird". New layouts must survive it: no fixed-width rows of controls, icon rows
+  wrap (`flexWrap` + `minWidth` on the text block, see `workout-exercise-card.tsx`), modals cap
+  at `maxWidth: 520` / `maxHeight: "85%"` and scroll inside.
+- **Keep `npx expo lint` and `npx tsc --noEmit` clean** — both pass as of v1.7. `mobile/`
+  ships without eslint in `node_modules` after a fresh clone; `npm install` restores it.
 
 ### Android release build (this machine)
 
-- JDK 17 at `C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot` (`JAVA_HOME`); SDK at
+- **JDK:** the Adoptium 17 install is gone as of 2026-07-28; use Android Studio's bundled JBR 21,
+  `JAVA_HOME=C:\Program Files\Android\Android Studio\jbr` (builds fine with AGP 8.x). SDK at
   `%LOCALAPPDATA%\Android\Sdk`, not on PATH.
 - **Build from `C:\rfb`, never the repo path.** `C:\rfb` is a robocopy of `mobile/` with its own
   `npm ci`; building in place fails with `ninja: error: manifest 'build.ninja' still dirty after
   100 tries` because object paths in expo-modules-core / react-native-reanimated exceed CMake's
   250-char Windows limit. A junction does not help — Gradle canonicalizes it away.
-- Sync then build: `robocopy mobile\src C:\rfb\src /MIR`, then
-  `cd C:\rfb\android && gradlew assembleRelease --no-daemon` (~1 min incremental, ~11 min cold).
-  APK lands at `android\app\build\outputs\apk\release\app-release.apk`, debug-keystore signed.
+- `mobile/` has **no committed `android/`** directory, so a freshly created `C:\rfb` needs
+  `npm ci` then `npx expo prebuild --platform android --no-install` before Gradle will run.
+- Sync then build: `robocopy mobile\src C:\rfb\src /MIR`, then from `C:\rfb\android`
+  `cmd /c C:\rfb\android\gradlew.bat assembleRelease --no-daemon` — invoke it by **full path**;
+  a bare `gradlew.bat` is not found even with the working directory set. ~1 min incremental,
+  ~11 min cold. APK lands at `android\app\build\outputs\apk\release\app-release.apk`,
+  debug-keystore signed.
 - Install: `adb install -r <apk>`. The owner's cable drops mid-transfer often — if it fails
   partway, `adb wait-for-device` and retry; it usually succeeds on the second attempt.
 - Release APKs are copied to the repo root as `rozakos-fitness-vX.Y.apk` and are gitignored.
@@ -116,12 +126,21 @@ earlier trailers — do not reintroduce them.
   to log, `set_number` guarded against non-finite stored values
 - [x] v1.6 (2026-07-25): fixed sets not appearing until the workout was finished (three separate
   causes, see below), bodyweight sets now store bodyweight ± added load, eslint set up and clean
+- [x] v1.7 (2026-07-28): per-exercise **info sheet** (ℹ on every card in a live workout — rep
+  PRs + the last five sessions) and **form-demo video links** (`Exercise.video_url`, new
+  `PATCH /exercises/{id}`, mirrored in `local/api.ts` under `db.exerciseVideos`). The YouTube
+  icon on a card plays the link via `Linking.openURL`, or opens the sheet to paste one.
+  `main.py:add_missing_columns` back-fills `video_url` on an existing SQLite file, since
+  `create_all` never alters tables.
 - [x] Built and installed as a release APK on the owner's phone (Galaxy Z Flip3) — see the
   Android build recipe below. Never smoke-tested via Expo Go, which is fine; the APK is the
   delivery path.
-- [ ] **v1.6 is installed but not runtime-verified.** No test runner exists in `mobile/`, so the
-  bodyweight math, the ± toggle, the rest timer's new `durationMs` first frame, and the routine
-  editor's render-time seeding have only been typechecked and linted. Ask the owner what they saw.
+- [ ] **v1.6/v1.7 are installed but not runtime-verified.** No test runner exists in `mobile/`, so
+  the bodyweight math, the ± toggle, the rest timer's new `durationMs` first frame, the routine
+  editor's render-time seeding, and now the info sheet / video buttons have only been typechecked
+  and linted. v1.7's local-mode data path *was* checked by compiling `local/api.ts` to CommonJS and
+  driving it from node with `react-native` stubbed — a repeatable trick when a change touches
+  `local/api.ts`. Ask the owner what they saw on the phone.
 - [ ] MediaPipe client untested on real hardware (no camera here); angle thresholds need calibration
 
 ## The v1.6 set-logging fix (2026-07-25) — three independent causes

@@ -28,6 +28,14 @@ export function useExercises(search?: string, muscleGroup?: string) {
   });
 }
 
+export function useExercise(exerciseId: number | undefined) {
+  return useQuery<Exercise>({
+    queryKey: ["exercise", exerciseId],
+    queryFn: () => api(`/exercises/${exerciseId}`),
+    enabled: exerciseId !== undefined,
+  });
+}
+
 export function useExerciseHistory(exerciseId: number | undefined, limit = 5) {
   return useQuery<ExerciseHistoryEntry[]>({
     queryKey: ["exercise-history", exerciseId, limit],
@@ -42,6 +50,20 @@ export function useCreateExercise() {
     mutationFn: (body: { name: string; muscle_group: string; equipment: string }) =>
       api<Exercise>("/exercises", { method: "POST", body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["exercises"] }),
+  });
+}
+
+/**
+ * Attach or clear an exercise's form-demo video link. The exercise is embedded in
+ * routine, workout and PR payloads, so every one of those caches is stale after
+ * a change — invalidate broadly rather than surgically.
+ */
+export function useSetExerciseVideo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, videoUrl }: { id: number; videoUrl: string | null }) =>
+      api<Exercise>(`/exercises/${id}`, { method: "PATCH", body: { video_url: videoUrl } }),
+    onSuccess: () => qc.invalidateQueries(),
   });
 }
 

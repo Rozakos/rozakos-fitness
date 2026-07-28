@@ -27,9 +27,17 @@ Tokens expire after 7 days by default (`ROZAKOS_ACCESS_TOKEN_EXPIRE_MINUTES`).
 | Method & path | Notes |
 |---|---|
 | `GET /exercises?search=&muscle_group=` | Built-ins (61 seeded) + your custom exercises |
-| `POST /exercises` | `{name, muscle_group, equipment, rest_seconds_default}` → custom, visible only to you |
+| `POST /exercises` | `{name, muscle_group, equipment, rest_seconds_default, video_url?}` → custom, visible only to you |
 | `GET /exercises/{id}` | |
+| `PATCH /exercises/{id}` | `{video_url}` — form-demo link; blank/`null` clears it, omitting the key leaves it untouched |
 | `GET /exercises/{id}/history?limit=10` | Newest-first entries `{workout_id, date, sets[]}` from **finished** workouts — powers the "last time" ghost values |
+
+Every `ExerciseOut` (including the copies nested in routine, workout and PR payloads)
+carries `video_url`: a full `http(s)` URL, usually YouTube, that the app opens with the
+OS handler. A bare `youtube.com/...` is rejected with `422` because the phone cannot open
+it. Note that **built-in exercises are shared rows**, so a link set on one is visible to
+every account on that server — intended for a personal deployment. Custom exercises are
+per-owner and unaffected.
 
 ## Routines (templates)
 

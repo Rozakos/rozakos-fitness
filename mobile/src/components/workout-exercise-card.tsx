@@ -10,6 +10,8 @@ import {
   useRemoveWorkoutExercise,
 } from "@/api/hooks";
 import type { WorkoutExercise, WorkoutSet } from "@/api/types";
+import { ExerciseInfoSheet } from "@/components/exercise-info-sheet";
+import { YOUTUBE_RED, openVideo } from "@/components/exercise-video";
 import { PlateCalculator } from "@/components/plate-calculator";
 import { Badge, Card, Input } from "@/components/ui";
 import { displayToRpe, fromKg, rpeToDisplay, toKg, useSettings } from "@/store/settings";
@@ -90,6 +92,7 @@ export function WorkoutExerciseCard({
   const [intensity, setIntensity] = useState("");
   const [warmup, setWarmup] = useState(false);
   const [platesOpen, setPlatesOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [addedSign, setAddedSign] = useState<1 | -1>(1);
 
   // For bodyweight movements the weight box means *added* load, not total: blank
@@ -156,7 +159,7 @@ export function WorkoutExerciseCard({
   return (
     <Card>
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
+        <View style={styles.headerTitle}>
           <Text style={styles.name}>{we.exercise.name}</Text>
           <Text style={styles.muted}>
             {we.exercise.muscle_group}
@@ -170,16 +173,33 @@ export function WorkoutExerciseCard({
           <Badge label={`SS${we.superset_group}`} color={colors.accent} />
         ) : null}
         <View style={styles.headerActions}>
-          <Pressable onPress={() => onMove(-1)} hitSlop={6}>
+          <Pressable onPress={() => setInfoOpen(true)} hitSlop={8}>
+            <Ionicons name="information-circle-outline" size={19} color={colors.accentBright} />
+          </Pressable>
+          {/* with a link saved this plays it straight away; without one it opens
+              the sheet, which is where a link gets pasted */}
+          <Pressable
+            onPress={() =>
+              we.exercise.video_url ? openVideo(we.exercise.video_url) : setInfoOpen(true)
+            }
+            hitSlop={8}
+          >
+            <Ionicons
+              name="logo-youtube"
+              size={18}
+              color={we.exercise.video_url ? YOUTUBE_RED : colors.textFaint}
+            />
+          </Pressable>
+          <Pressable onPress={() => onMove(-1)} hitSlop={8}>
             <Ionicons name="chevron-up" size={18} color={colors.textMuted} />
           </Pressable>
-          <Pressable onPress={() => onMove(1)} hitSlop={6}>
+          <Pressable onPress={() => onMove(1)} hitSlop={8}>
             <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
           </Pressable>
-          <Pressable onPress={onSwap} hitSlop={6}>
+          <Pressable onPress={onSwap} hitSlop={8}>
             <Ionicons name="swap-horizontal" size={18} color={colors.textMuted} />
           </Pressable>
-          <Pressable onPress={() => removeExercise.mutate({ workoutId, weId: we.id })} hitSlop={6}>
+          <Pressable onPress={() => removeExercise.mutate({ workoutId, weId: we.id })} hitSlop={8}>
             <Ionicons name="trash-outline" size={18} color={colors.textFaint} />
           </Pressable>
         </View>
@@ -274,6 +294,12 @@ export function WorkoutExerciseCard({
         </Text>
       ) : null}
 
+      <ExerciseInfoSheet
+        exercise={we.exercise}
+        visible={infoOpen}
+        onClose={() => setInfoOpen(false)}
+      />
+
       <PlateCalculator
         visible={platesOpen}
         // a dip belt / weight vest is loaded with the added weight, not the total
@@ -286,12 +312,22 @@ export function WorkoutExerciseCard({
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "center", marginBottom: spacing.sm },
+  // wraps rather than squeezing: on a narrow phone (Z Flip) or at a large system
+  // font scale the six icons drop to their own line instead of crushing the name
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    rowGap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  headerTitle: { flexGrow: 1, flexShrink: 1, minWidth: 150 },
   headerActions: {
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.xs,
     alignItems: "center",
-    marginLeft: spacing.sm,
+    marginLeft: "auto",
+    paddingLeft: spacing.sm,
   },
   name: { color: colors.text, fontSize: 16, fontWeight: "700" },
   muted: { color: colors.textMuted, fontSize: 12 },

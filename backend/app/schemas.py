@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class ORMModel(BaseModel):
@@ -35,11 +35,37 @@ class TokenResponse(BaseModel):
 
 # --- Exercises ---
 
+def _clean_video_url(value: str | None) -> str | None:
+    """Blank clears the link; anything kept must be an http(s) URL the phone can
+    hand to the OS (a bare "youtube.com/..." would fail to open)."""
+    if value is None:
+        return None
+    url = value.strip()
+    if not url:
+        return None
+    if not url.lower().startswith(("http://", "https://")):
+        raise ValueError("video_url must start with http:// or https://")
+    if len(url) > 500:
+        raise ValueError("video_url is too long")
+    return url
+
+
 class ExerciseCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     muscle_group: str
     equipment: str = "barbell"
     rest_seconds_default: int = 120
+    video_url: str | None = None
+
+    _normalize_video_url = field_validator("video_url")(_clean_video_url)
+
+
+class ExerciseUpdate(BaseModel):
+    """Only the fields the app can edit on an existing exercise."""
+
+    video_url: str | None = None
+
+    _normalize_video_url = field_validator("video_url")(_clean_video_url)
 
 
 class ExerciseOut(ORMModel):
@@ -49,6 +75,7 @@ class ExerciseOut(ORMModel):
     equipment: str
     rest_seconds_default: int
     is_custom: bool
+    video_url: str | None = None
 
 
 # --- Routines ---
