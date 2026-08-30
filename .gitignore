@@ -2,6 +2,8 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.venv/
+.test-backups/
 backend/*.db
 
 # Node / Expo (mobile/ has its own .gitignore from the template)
