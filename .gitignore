@@ -12,3 +12,11 @@ node_modules/
 
 # Release builds (kept locally / attached to GitHub releases, not committed)
 *.apk
+*.aab
+
+# Signing keys and Play credentials. These live outside the repo, under
+# %USERPROFILE%\.rozakos-release\ - these patterns are a second line of defence.
+*.jks
+*.keystore
+play-service-account*.json
+signing.properties

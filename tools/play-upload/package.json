@@ -1,0 +1,10 @@
+{
+  "name": "rozakos-play-upload",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Uploads a release .aab to Google Play. Kept out of mobile/ so a release-only dependency never reaches the app bundle.",
+  "main": "upload.js",
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}
