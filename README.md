@@ -14,7 +14,7 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 | API server | Python, FastAPI, SQLAlchemy, SQLite | `backend/` |
 | Mobile app | React Native, Expo, TypeScript | `mobile/` |
 | Device examples | Python (requests + websockets) | `examples/` |
-| Docs | [API reference](docs/api.md) · [Device integration guide](docs/device-integration.md) | `docs/` |
+| Docs | [API reference](docs/api.md) · [Device integration guide](docs/device-integration.md) · [Deployment](docs/deployment.md) | `docs/` |
 
 ### Features (v1 — the Tracked strength-training core)
 
@@ -42,13 +42,16 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 ```bash
 cd backend
 pip install -r requirements.txt
+cp .env.example .env  # then set ROZAKOS_SECRET_KEY to a unique random value
 uvicorn app.main:app --host 0.0.0.0 --reload
 ```
 
 - Interactive API docs: http://localhost:8000/docs (full reference: [docs/api.md](docs/api.md))
 - The database (`fitness.db`) is created and seeded with exercises on first start. After
   pulling a schema change, delete the file — it's dev-only and there are no migrations yet.
-- Configuration: copy `backend/.env.example` to `backend/.env` (all optional in dev).
+- Configuration: copy `backend/.env.example` to `backend/.env`. `ROZAKOS_SECRET_KEY` is
+  required and must be at least 32 characters; the API refuses to start without it. Generate
+  one with `openssl rand -hex 32`.
 - Run tests: `pytest`
 
 ### Mobile app
@@ -107,5 +110,5 @@ Backend settings via environment variables (prefix `ROZAKOS_`) or `backend/.env`
 | Variable | Default | Notes |
 |---|---|---|
 | `ROZAKOS_DATABASE_URL` | `sqlite:///./fitness.db` | Any SQLAlchemy URL; Postgres is a drop-in |
-| `ROZAKOS_SECRET_KEY` | dev value | **Change in production** |
+| `ROZAKOS_SECRET_KEY` | *(required)* | At least 32 characters; no fallback |
 | `ROZAKOS_ACCESS_TOKEN_EXPIRE_MINUTES` | 10080 (7 days) | |

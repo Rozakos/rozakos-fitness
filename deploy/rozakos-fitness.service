@@ -1,0 +1,30 @@
+[Unit]
+Description=Rozakos Fitness API
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=rozakos-fitness
+Group=rozakos-fitness
+WorkingDirectory=/opt/rozakos-fitness/backend
+EnvironmentFile=/etc/rozakos-fitness.env
+ExecStart=/opt/rozakos-fitness/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8002 --proxy-headers --forwarded-allow-ips=127.0.0.1 --no-access-log
+Restart=always
+RestartSec=5
+UMask=0077
+
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/rozakos-fitness
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

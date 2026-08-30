@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 os.environ["ROZAKOS_DATABASE_URL"] = "sqlite:///./test_fitness.db"
+os.environ["ROZAKOS_SECRET_KEY"] = "test-only-secret-key-that-is-at-least-32-characters"
 
 from app.database import Base, engine  # noqa: E402
 from app.main import app  # noqa: E402

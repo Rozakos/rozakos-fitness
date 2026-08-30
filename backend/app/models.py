@@ -22,6 +22,12 @@ class User(Base):
     api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     workouts: Mapped[list["Workout"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     routines: Mapped[list["Routine"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    bodyweight_entries: Mapped[list["BodyweightEntry"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    custom_exercises: Mapped[list["Exercise"]] = relationship(
+        back_populates="owner", cascade="all, delete-orphan", foreign_keys="Exercise.owner_id"
+    )
 
 
 class ApiKey(Base):
@@ -56,6 +62,8 @@ class Exercise(Base):
     # {"label": ..., "value": ...} rows ("Seat height" / "4"). Shared across
     # accounts on built-in rows for the same reason video_url is — see docs/api.md.
     setup: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+
+    owner: Mapped[User | None] = relationship(back_populates="custom_exercises", foreign_keys=[owner_id])
 
 
 class Routine(Base):
@@ -146,3 +154,5 @@ class BodyweightEntry(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     date: Mapped[date] = mapped_column(Date, index=True)
     weight_kg: Mapped[float] = mapped_column(Float)
+
+    user: Mapped[User] = relationship(back_populates="bodyweight_entries")

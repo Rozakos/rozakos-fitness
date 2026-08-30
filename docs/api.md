@@ -19,8 +19,19 @@ Warm-up sets (`is_warmup: true`) are excluded from every stats endpoint.
 | `POST /auth/register` | `{email, password (≥8), display_name}` | `201` `{access_token, token_type, user}` — `409` if email taken |
 | `POST /auth/login` | `{email, password}` | `{access_token, token_type, user}` — `401` on bad credentials |
 | `GET /auth/me` | — | current user |
+| `DELETE /auth/account` | — | `204`; permanently deletes the account and all owned data |
 
 Tokens expire after 7 days by default (`ROZAKOS_ACCESS_TOKEN_EXPIRE_MINUTES`).
+Registration is limited to 10 attempts per client IP per hour. Login is limited to 30
+attempts per client IP per minute and 10 failed attempts per account per 15 minutes; `429`
+includes `Retry-After`. The limiter is in-process and assumes the documented single-worker
+SQLite deployment. When running behind a local reverse proxy or tunnel, configure Uvicorn's
+trusted proxy IPs so `request.client` contains the original client address.
+
+`GET /account-deletion` is the public web flow used by the Play listing. It authenticates
+the user and invokes the same deletion endpoint. Account deletion removes the user row,
+password hash, workouts and sets, routines, bodyweight entries, custom exercises, and device
+API keys. No server-side account data is retained.
 
 ## Exercises
 

@@ -1,6 +1,8 @@
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
+import { api } from "@/api/client";
 import { useBodyweight, usePRs, useWeeklyVolume } from "@/api/hooks";
 import { LabeledBars, TrendLine, WeeklyBars } from "@/components/charts";
 import { Button, Card, SectionTitle } from "@/components/ui";
@@ -11,6 +13,7 @@ import { colors, radius, spacing } from "@/theme/colors";
 export default function Profile() {
   const router = useRouter();
   const { user, localMode, signOut } = useAuth();
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const { width } = useWindowDimensions();
   const { data: volume } = useWeeklyVolume(12);
   const { data: bodyweight } = useBodyweight();
@@ -34,6 +37,31 @@ export default function Profile() {
     })
     .sort((a, b) => b.best.weight_kg - a.best.weight_kg)
     .slice(0, 5);
+
+  const deleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await api<void>("/auth/account", { method: "DELETE" });
+      await signOut();
+    } catch (error) {
+      Alert.alert(
+        "Account not deleted",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+      setDeletingAccount(false);
+    }
+  };
+
+  const confirmAccountDeletion = () => {
+    Alert.alert(
+      "Permanently delete account?",
+      "This deletes your workout history, routines, bodyweight entries, custom exercises, and device keys. It cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete account", style: "destructive", onPress: () => void deleteAccount() },
+      ],
+    );
+  };
 
   return (
     <ScrollView
@@ -123,11 +151,23 @@ export default function Profile() {
         </>
       )}
 
-      <Button
-        title={localMode ? "Exit local mode" : "Log out"}
-        variant="danger"
-        onPress={signOut}
-      />
+      <SectionTitle>Account</SectionTitle>
+      <View style={styles.accountActions}>
+        {!localMode ? (
+          <Button
+            title="Delete account and data"
+            variant="danger"
+            loading={deletingAccount}
+            onPress={confirmAccountDeletion}
+          />
+        ) : null}
+        <Button
+          title={localMode ? "Exit local mode" : "Log out"}
+          variant={localMode ? "danger" : "secondary"}
+          disabled={deletingAccount}
+          onPress={() => void signOut()}
+        />
+      </View>
       {localMode ? (
         <Text style={styles.deviceHint}>
           Exiting keeps your data on this phone — come back to local mode any time.
@@ -138,6 +178,7 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
+  accountActions: { gap: spacing.sm },
   unitRow: { flexDirection: "row", gap: spacing.sm },
   unitChip: {
     backgroundColor: colors.surfaceRaised,
