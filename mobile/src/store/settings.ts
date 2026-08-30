@@ -53,6 +53,17 @@ export function formatWeight(kg: number, unit: WeightUnit): string {
   return `${fromKg(kg, unit)} ${unit}`;
 }
 
+/**
+ * "2nd of 5" — where a lift fell in that day's session. Worth showing next to
+ * old numbers: the same weight moved first is not the same effort as moved last.
+ */
+export function formatPerformedOrder(position: number, total: number): string {
+  const teens = position % 100;
+  const suffix =
+    teens >= 11 && teens <= 13 ? "th" : (["th", "st", "nd", "rd"][position % 10] ?? "th");
+  return `${position}${suffix} of ${total}`;
+}
+
 /** Server always stores RPE (1–10). RIR is the mirror image: RIR = 10 − RPE. */
 export function rpeToDisplay(rpe: number, mode: IntensityMode): string {
   return mode === "rir" ? `RIR ${Math.round((10 - rpe) * 10) / 10}` : `RPE ${rpe}`;

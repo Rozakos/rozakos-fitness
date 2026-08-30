@@ -17,6 +17,13 @@ import { Badge, Card, Input } from "@/components/ui";
 import { displayToRpe, fromKg, rpeToDisplay, toKg, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
 
+/**
+ * Left blank, a working set is recorded as taken to failure — RIR 0, which the
+ * server stores as RPE 10 (`RIR = 10 − RPE`). Same physical claim in either
+ * display mode, so the constant is the stored RPE.
+ */
+const FAILURE_RPE = 10;
+
 function SetRow({
   set,
   workoutId,
@@ -138,8 +145,15 @@ export function WorkoutExerciseCard({
   const submit = () => {
     if (!canLog) return;
     const r = parsedReps;
-    const raw = intensity ? parseFloat(intensity.replace(",", ".")) : null;
-    const rpeValue = raw !== null && !Number.isNaN(raw) ? displayToRpe(raw, intensityMode) : null;
+    const typed = intensity.trim();
+    const raw = typed ? parseFloat(typed.replace(",", ".")) : NaN;
+    // A warm-up left blank stays unrecorded: warm-ups are by definition not to
+    // failure, and stamping RIR 0 on one would be a lie in the history.
+    const rpeValue = Number.isNaN(raw)
+      ? warmup
+        ? null
+        : FAILURE_RPE
+      : displayToRpe(raw, intensityMode);
     logSet.mutate(
       { workoutId, weId: we.id, weight_kg: totalKg, reps: r, rpe: rpeValue, is_warmup: warmup },
       {
@@ -168,6 +182,13 @@ export function WorkoutExerciseCard({
               : ""}
             {ghost ? `  ·  last: ${fromKg(ghost.weight_kg, unit)} ${unit} × ${ghost.reps}` : ""}
           </Text>
+          {/* the machine settings are wanted before the first rep, so they go on
+              the card itself rather than one tap away in the info sheet */}
+          {we.exercise.setup.length ? (
+            <Text style={styles.setupLine} numberOfLines={2}>
+              {we.exercise.setup.map((row) => `${row.label} ${row.value}`).join("  ·  ")}
+            </Text>
+          ) : null}
         </View>
         {we.superset_group != null ? (
           <Badge label={`SS${we.superset_group}`} color={colors.accent} />
@@ -270,7 +291,15 @@ export function WorkoutExerciseCard({
           style={styles.input}
         />
         <Input
-          placeholder={intensityMode.toUpperCase()}
+          // like the weight/reps boxes, the placeholder is the value that gets
+          // logged if it is left alone — nothing at all for a warm-up
+          placeholder={
+            warmup
+              ? intensityMode.toUpperCase()
+              : String(
+                  intensityMode === "rir" ? 10 - FAILURE_RPE : FAILURE_RPE,
+                )
+          }
           keyboardType="decimal-pad"
           value={intensity}
           onChangeText={setIntensity}
@@ -331,6 +360,7 @@ const styles = StyleSheet.create({
   },
   name: { color: colors.text, fontSize: 16, fontWeight: "700" },
   muted: { color: colors.textMuted, fontSize: 12 },
+  setupLine: { color: colors.success, fontSize: 12, marginTop: 2 },
   hintBar: {
     flexDirection: "row",
     alignItems: "center",

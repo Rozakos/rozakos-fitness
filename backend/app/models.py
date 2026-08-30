@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -52,6 +52,10 @@ class Exercise(Base):
     # exercises are shared rows, so a link on one is visible to every account on
     # this server — fine for a personal deployment, see docs/api.md.
     video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Machine setup recorded once and read back at the rack: a list of
+    # {"label": ..., "value": ...} rows ("Seat height" / "4"). Shared across
+    # accounts on built-in rows for the same reason video_url is — see docs/api.md.
+    setup: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
 
 
 class Routine(Base):

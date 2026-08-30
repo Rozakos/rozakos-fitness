@@ -7,6 +7,7 @@ import type {
   Exercise,
   ExerciseHistoryEntry,
   ExercisePRs,
+  ExerciseSetupEntry,
   ExerciseTrendPoint,
   Routine,
   WeekVolume,
@@ -63,6 +64,20 @@ export function useSetExerciseVideo() {
   return useMutation({
     mutationFn: ({ id, videoUrl }: { id: number; videoUrl: string | null }) =>
       api<Exercise>(`/exercises/${id}`, { method: "PATCH", body: { video_url: videoUrl } }),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+/**
+ * Replace an exercise's machine-setup rows. The whole list is sent every time —
+ * there is no per-row endpoint — and the same broad invalidation applies as for
+ * the video link, since the exercise rides along in every nested payload.
+ */
+export function useSetExerciseSetup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, setup }: { id: number; setup: ExerciseSetupEntry[] }) =>
+      api<Exercise>(`/exercises/${id}`, { method: "PATCH", body: { setup } }),
     onSuccess: () => qc.invalidateQueries(),
   });
 }

@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 
-import type { BodyweightEntry, Exercise } from "../api/types";
+import type { BodyweightEntry, Exercise, ExerciseSetupEntry } from "../api/types";
 
 /**
  * On-phone database for local mode: one JSON document in the app's document
@@ -68,6 +68,9 @@ export interface LocalDB {
    * derived from `catalog.ts` and must stay immutable.
    */
   exerciseVideos: Record<number, string>;
+  /** exercise id → machine-setup rows, stored alongside the videos and for the
+   * same reason: the built-in catalog is a module constant and stays immutable. */
+  exerciseSetups: Record<number, ExerciseSetupEntry[]>;
 }
 
 // Built-in catalog ids are 1..N (list position); locally created entities
@@ -84,6 +87,7 @@ function emptyDb(): LocalDB {
     workouts: [],
     bodyweight: [],
     exerciseVideos: {},
+    exerciseSetups: {},
   };
 }
 

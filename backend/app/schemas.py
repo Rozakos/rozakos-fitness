@@ -50,22 +50,56 @@ def _clean_video_url(value: str | None) -> str | None:
     return url
 
 
+MAX_SETUP_ENTRIES = 12
+
+
+class SetupEntry(BaseModel):
+    """One machine adjustment: the knob/pin name and whatever the machine reads.
+
+    `value` is a string, not a number, because gyms label these inconsistently —
+    a seat is "4" but a handle is "wide" and a pin is "3rd hole".
+    """
+
+    label: str = Field(min_length=1, max_length=40)
+    value: str = Field(min_length=1, max_length=40)
+
+    @field_validator("label", "value", mode="before")
+    @classmethod
+    def _strip(cls, value: object) -> object:
+        # before the length constraints, so "  " is rejected rather than stored blank
+        return value.strip() if isinstance(value, str) else value
+
+
+def _clean_setup(value: list[SetupEntry] | None) -> list[SetupEntry]:
+    """`null` and `[]` both mean "nothing recorded". The cap keeps a shared
+    built-in exercise row from growing an unbounded blob."""
+    if value is None:
+        return []
+    if len(value) > MAX_SETUP_ENTRIES:
+        raise ValueError(f"at most {MAX_SETUP_ENTRIES} setup rows")
+    return value
+
+
 class ExerciseCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     muscle_group: str
     equipment: str = "barbell"
     rest_seconds_default: int = 120
     video_url: str | None = None
+    setup: list[SetupEntry] | None = None
 
     _normalize_video_url = field_validator("video_url")(_clean_video_url)
+    _normalize_setup = field_validator("setup")(_clean_setup)
 
 
 class ExerciseUpdate(BaseModel):
     """Only the fields the app can edit on an existing exercise."""
 
     video_url: str | None = None
+    setup: list[SetupEntry] | None = None
 
     _normalize_video_url = field_validator("video_url")(_clean_video_url)
+    _normalize_setup = field_validator("setup")(_clean_setup)
 
 
 class ExerciseOut(ORMModel):
@@ -76,6 +110,13 @@ class ExerciseOut(ORMModel):
     rest_seconds_default: int
     is_custom: bool
     video_url: str | None = None
+    setup: list[SetupEntry] = []
+
+    @field_validator("setup", mode="before")
+    @classmethod
+    def _setup_never_null(cls, value: object) -> object:
+        # the column is NULL for every exercise predating the feature
+        return value or []
 
 
 # --- Routines ---
@@ -238,6 +279,11 @@ class ExerciseHistoryEntry(BaseModel):
     workout_id: int
     date: datetime
     sets: list[SetOut]
+    # Where this lift actually fell in that day's session (1 = opened the
+    # workout). Fatigue makes the 5th movement a different stimulus from the
+    # 1st, so the app shows it next to the numbers.
+    position: int
+    total_exercises: int
 
 
 # --- Bodyweight ---

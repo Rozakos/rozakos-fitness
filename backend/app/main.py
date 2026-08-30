@@ -16,7 +16,7 @@ settings = get_settings()
 # Columns added after a table shipped. `create_all` only creates missing tables,
 # so without this an existing fitness.db would 500 on every exercise read.
 ADDED_COLUMNS: dict[str, dict[str, str]] = {
-    "exercises": {"video_url": "VARCHAR(500)"},
+    "exercises": {"video_url": "VARCHAR(500)", "setup": "TEXT"},
 }
 
 

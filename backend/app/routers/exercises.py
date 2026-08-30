@@ -73,14 +73,28 @@ def update_exercise(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Attach (or clear) the form-demo video link. Built-in exercises are shared
-    rows, so the link applies server-wide — intended for personal deployments."""
+    """Attach (or clear) the form-demo video link and the machine setup rows.
+    Built-in exercises are shared rows, so both apply server-wide — intended for
+    personal deployments."""
     exercise = get_visible_exercise(db, user, exercise_id)
     if "video_url" in body.model_fields_set:
         exercise.video_url = body.video_url
+    if "setup" in body.model_fields_set:
+        # stored as NULL rather than [] so "never recorded" reads the same as it
+        # did for every exercise predating the column
+        exercise.setup = [entry.model_dump() for entry in body.setup] or None
     db.commit()
     db.refresh(exercise)
     return exercise
+
+
+def performed_order(workout: Workout) -> list[int]:
+    """WorkoutExercise ids in the order they were actually *worked*, which is not
+    `WorkoutExercise.order` — that is the session list the user reorders freely.
+    The real sequence is when the first set of each landed."""
+    worked = [we for we in workout.exercises if we.sets]
+    worked.sort(key=lambda we: min(s.completed_at for s in we.sets))
+    return [we.id for we in worked]
 
 
 @router.get("/{exercise_id}/history", response_model=list[ExerciseHistoryEntry])
@@ -110,11 +124,14 @@ def exercise_history(
         sets = [s for s in we.sets]
         if not sets:
             continue
+        order = performed_order(we.workout)
         entries.append(
             ExerciseHistoryEntry(
                 workout_id=we.workout_id,
                 date=we.workout.started_at,
                 sets=[SetOut.model_validate(s) for s in sets],
+                position=order.index(we.id) + 1,
+                total_exercises=len(order),
             )
         )
     return entries

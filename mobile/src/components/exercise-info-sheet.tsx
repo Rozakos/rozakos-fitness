@@ -3,9 +3,11 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 
 import { useExerciseHistory, usePRs } from "@/api/hooks";
 import type { Exercise, WorkoutSet } from "@/api/types";
+import { ExerciseSetupList } from "@/components/exercise-setup";
 import { ExerciseVideoLink } from "@/components/exercise-video";
 import { Card } from "@/components/ui";
 import {
+  formatPerformedOrder,
   fromKg,
   rpeToDisplay,
   useSettings,
@@ -30,9 +32,10 @@ function setLine(set: WorkoutSet, unit: WeightUnit, intensityMode: IntensityMode
 }
 
 /**
- * Mid-workout reference for one exercise: the form video plus what was actually
- * done last time. Everything lives in a scroll view with wrapping text so the
- * sheet survives narrow/tall screens and large system font scales.
+ * Mid-workout reference for one exercise: how the machine is set up, the form
+ * video, and what was actually done last time. Everything lives in a scroll view
+ * with wrapping text so the sheet survives narrow/tall screens and large system
+ * font scales.
  */
 export function ExerciseInfoSheet({
   exercise,
@@ -75,6 +78,12 @@ export function ExerciseInfoSheet({
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ paddingBottom: spacing.sm }}
             >
+              {/* first, because at the machine this is what you need before
+                  anything else */}
+              <Text style={styles.section}>Setup</Text>
+              <ExerciseSetupList exercise={exercise} />
+
+              <Text style={styles.section}>How it&apos;s done</Text>
               <ExerciseVideoLink exercise={exercise} />
 
               <Text style={styles.section}>Personal records</Text>
@@ -96,7 +105,12 @@ export function ExerciseInfoSheet({
               {history?.length ? (
                 history.map((entry) => (
                   <View key={entry.workout_id} style={styles.session}>
-                    <Text style={styles.sessionDate}>{sessionDate(entry.date)}</Text>
+                    <View style={styles.sessionHeader}>
+                      <Text style={styles.sessionDate}>{sessionDate(entry.date)}</Text>
+                      <Text style={styles.sessionOrder}>
+                        {formatPerformedOrder(entry.position, entry.total_exercises)}
+                      </Text>
+                    </View>
                     {entry.sets.map((set) => (
                       <Text key={set.id} style={styles.setLine}>
                         {setLine(set, unit, intensityMode)}
@@ -157,7 +171,15 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     marginBottom: spacing.xs,
   },
-  sessionDate: { color: colors.text, fontSize: 13, fontWeight: "700", marginBottom: 2 },
+  sessionHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: 2,
+  },
+  sessionDate: { color: colors.text, fontSize: 13, fontWeight: "700" },
+  sessionOrder: { color: colors.textFaint, fontSize: 11 },
   setLine: { color: colors.textMuted, fontSize: 13, paddingVertical: 1 },
   muted: { color: colors.textMuted, fontSize: 13 },
 });

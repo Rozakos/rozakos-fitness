@@ -11,6 +11,12 @@ export interface TokenResponse {
   user: User;
 }
 
+/** One machine adjustment, e.g. `{ label: "Seat height", value: "4" }`. */
+export interface ExerciseSetupEntry {
+  label: string;
+  value: string;
+}
+
 export interface Exercise {
   id: number;
   name: string;
@@ -20,6 +26,8 @@ export interface Exercise {
   is_custom: boolean;
   /** Form-demo link (YouTube or any http(s) URL), opened by the info sheet. */
   video_url: string | null;
+  /** Machine setup to dial in before the first set. Always an array, never null. */
+  setup: ExerciseSetupEntry[];
 }
 
 export interface RoutineExercise {
@@ -81,6 +89,10 @@ export interface ExerciseHistoryEntry {
   workout_id: number;
   date: string;
   sets: WorkoutSet[];
+  /** Where this lift actually fell in that day's session (1 = opened it). */
+  position: number;
+  /** How many exercises were worked that day, so `position` reads as "2 of 5". */
+  total_exercises: number;
 }
 
 export interface RepPR {

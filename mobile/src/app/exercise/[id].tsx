@@ -3,9 +3,10 @@ import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-n
 
 import { useExercise, useExerciseHistory, useExerciseTrend, usePRs } from "@/api/hooks";
 import { TrendLine } from "@/components/charts";
+import { ExerciseSetupList } from "@/components/exercise-setup";
 import { ExerciseVideoLink } from "@/components/exercise-video";
 import { Card, SectionTitle } from "@/components/ui";
-import { fromKg, rpeToDisplay, useSettings } from "@/store/settings";
+import { formatPerformedOrder, fromKg, rpeToDisplay, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
 
 function shortDate(iso: string) {
@@ -29,12 +30,21 @@ export default function ExerciseDetail() {
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl }}
-      // the video link editor lives here, so the first tap on Save must land
+      // the video and setup editors live here, so the first tap on Save must land
       keyboardShouldPersistTaps="handled"
     >
       <Stack.Screen
         options={{ title: exercise?.name ?? exercisePRs?.exercise.name ?? "Exercise" }}
       />
+
+      <SectionTitle>Setup</SectionTitle>
+      <Card>
+        {exercise ? (
+          <ExerciseSetupList exercise={exercise} />
+        ) : (
+          <Text style={styles.muted}>Loading…</Text>
+        )}
+      </Card>
 
       <SectionTitle>How it&apos;s done</SectionTitle>
       <Card>
@@ -80,7 +90,12 @@ export default function ExerciseDetail() {
       {history?.length ? (
         history.map((entry) => (
           <Card key={entry.workout_id}>
-            <Text style={styles.historyDate}>{shortDate(entry.date)}</Text>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyDate}>{shortDate(entry.date)}</Text>
+              <Text style={styles.historyOrder}>
+                {formatPerformedOrder(entry.position, entry.total_exercises)}
+              </Text>
+            </View>
             {entry.sets.map((s) => (
               <Text key={s.id} style={styles.historySet}>
                 {s.is_warmup ? "W  " : `${s.set_number}  `}
@@ -109,7 +124,15 @@ const styles = StyleSheet.create({
   prReps: { color: colors.success, fontWeight: "800", width: 60 },
   prWeight: { color: colors.text, fontSize: 15, fontWeight: "600", flex: 1 },
   prDate: { color: colors.textFaint, fontSize: 12 },
-  historyDate: { color: colors.text, fontWeight: "700", marginBottom: spacing.xs },
+  historyHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  historyDate: { color: colors.text, fontWeight: "700" },
+  historyOrder: { color: colors.textFaint, fontSize: 12 },
   historySet: { color: colors.textMuted, fontSize: 13, paddingVertical: 2 },
   muted: { color: colors.textMuted, fontSize: 13 },
 });

@@ -27,10 +27,10 @@ Tokens expire after 7 days by default (`ROZAKOS_ACCESS_TOKEN_EXPIRE_MINUTES`).
 | Method & path | Notes |
 |---|---|
 | `GET /exercises?search=&muscle_group=` | Built-ins (61 seeded) + your custom exercises |
-| `POST /exercises` | `{name, muscle_group, equipment, rest_seconds_default, video_url?}` → custom, visible only to you |
+| `POST /exercises` | `{name, muscle_group, equipment, rest_seconds_default, video_url?, setup?}` → custom, visible only to you |
 | `GET /exercises/{id}` | |
-| `PATCH /exercises/{id}` | `{video_url}` — form-demo link; blank/`null` clears it, omitting the key leaves it untouched |
-| `GET /exercises/{id}/history?limit=10` | Newest-first entries `{workout_id, date, sets[]}` from **finished** workouts — powers the "last time" ghost values |
+| `PATCH /exercises/{id}` | `{video_url?, setup?}` — blank/`null` clears either; omitting a key leaves it untouched |
+| `GET /exercises/{id}/history?limit=10` | Newest-first entries `{workout_id, date, sets[], position, total_exercises}` from **finished** workouts — powers the "last time" ghost values |
 
 Every `ExerciseOut` (including the copies nested in routine, workout and PR payloads)
 carries `video_url`: a full `http(s)` URL, usually YouTube, that the app opens with the
@@ -38,6 +38,22 @@ OS handler. A bare `youtube.com/...` is rejected with `422` because the phone ca
 it. Note that **built-in exercises are shared rows**, so a link set on one is visible to
 every account on that server — intended for a personal deployment. Custom exercises are
 per-owner and unaffected.
+
+Every `ExerciseOut` also carries `setup`: the machine adjustments to dial in before the
+first set, as an ordered list of `{label, value}` rows — e.g.
+`[{"label": "Seat height", "value": "4"}, {"label": "Back pad", "value": "2"}]`. Both
+fields are trimmed, must be non-empty after trimming, and cap at 40 characters; at most
+**12 rows** per exercise. `value` is a string rather than a number because gyms label these
+inconsistently ("4", "wide", "3rd hole"). `setup` is **always an array, never `null`** on
+the way out — exercises predating the column read as `[]`. `PATCH` **replaces the whole
+list**; there is no per-row endpoint, and `[]` or `null` clears it. The same shared-row
+caveat as `video_url` applies.
+
+`position` / `total_exercises` on a history entry record **where the lift actually fell in
+that day's session** (`position: 1` opened the workout). This is derived from when each
+exercise's first set was logged, *not* from `WorkoutExercise.order` — that is the session
+list the user reorders freely, and reordering cards must not rewrite history. Exercises
+with no logged sets are excluded from both numbers.
 
 ## Routines (templates)
 
@@ -70,7 +86,11 @@ Only **one active workout** (`finished_at == null`) per user — starting a seco
 | `DELETE .../sets/{set_id}` | |
 
 The API stores intensity as **RPE (1–10)** only. The app's RIR mode converts at the
-UI boundary (`RIR = 10 − RPE`).
+UI boundary (`RIR = 10 − RPE`). `rpe` stays optional and nullable on the wire; the phone
+app applies its own rule on top — a **working** set logged with the intensity box left
+empty is sent as `rpe: 10` (RIR 0, taken to failure), while a blank **warm-up** is sent as
+`null`. A device client logging via `POST /device/sets` does not do this, so its sets stay
+`null` unless it sends a value.
 
 `weight_kg` is always the **total load moved**, so volume (`reps × weight_kg`), PRs and
 est-1RM stay comparable across exercises. For exercises with `equipment == "bodyweight"`

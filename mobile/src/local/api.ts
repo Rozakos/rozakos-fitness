@@ -3,6 +3,7 @@ import type {
   Exercise,
   ExerciseHistoryEntry,
   ExercisePRs,
+  ExerciseSetupEntry,
   ExerciseTrendPoint,
   RepPR,
   Routine,
@@ -39,6 +40,7 @@ const builtinExercises: Exercise[] = BUILTIN_EXERCISES.map(([name, muscle_group,
   rest_seconds_default: rest,
   is_custom: false,
   video_url: null,
+  setup: [],
 }));
 
 function allExercises(db: LocalDB): Exercise[] {
@@ -47,17 +49,22 @@ function allExercises(db: LocalDB): Exercise[] {
 
 /**
  * Every exercise leaves this module as a fresh object with its stored video link
- * applied — the built-in catalog is a module constant that must never be mutated,
- * and copying also keeps the no-aliasing rule (see `copySets`) for custom ones.
+ * and setup rows applied — the built-in catalog is a module constant that must
+ * never be mutated, and copying also keeps the no-aliasing rule (see `copySets`)
+ * for custom ones. The setup rows are copied element-wise for that same reason.
  */
-function withVideo(db: LocalDB, exercise: Exercise): Exercise {
-  return { ...exercise, video_url: db.exerciseVideos[exercise.id] ?? null };
+function withOverrides(db: LocalDB, exercise: Exercise): Exercise {
+  return {
+    ...exercise,
+    video_url: db.exerciseVideos[exercise.id] ?? null,
+    setup: (db.exerciseSetups[exercise.id] ?? []).map((row) => ({ ...row })),
+  };
 }
 
 function getExercise(db: LocalDB, id: number): Exercise {
   const found = allExercises(db).find((e) => e.id === id);
   if (!found) throw new ApiError(404, "Exercise not found");
-  return withVideo(db, found);
+  return withOverrides(db, found);
 }
 
 /** Mirrors `_clean_video_url` in backend/app/schemas.py. */
@@ -70,6 +77,27 @@ function cleanVideoUrl(value: unknown): string | null {
   }
   if (url.length > 500) throw new ApiError(422, "That link is too long.");
   return url;
+}
+
+const MAX_SETUP_ENTRIES = 12;
+const MAX_SETUP_FIELD = 40;
+
+/** Mirrors `SetupEntry` + `_clean_setup` in backend/app/schemas.py. */
+function cleanSetup(value: unknown): ExerciseSetupEntry[] {
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value)) throw new ApiError(422, "Setup must be a list of rows.");
+  if (value.length > MAX_SETUP_ENTRIES) {
+    throw new ApiError(422, `At most ${MAX_SETUP_ENTRIES} setup rows.`);
+  }
+  return value.map((row) => {
+    const label = typeof row?.label === "string" ? row.label.trim() : "";
+    const rawValue = typeof row?.value === "string" ? row.value.trim() : "";
+    if (!label || !rawValue) throw new ApiError(422, "Each setup row needs a name and a value.");
+    if (label.length > MAX_SETUP_FIELD || rawValue.length > MAX_SETUP_FIELD) {
+      throw new ApiError(422, `Keep setup rows under ${MAX_SETUP_FIELD} characters.`);
+    }
+    return { label, value: rawValue };
+  });
 }
 
 function notFound(what: string): never {
@@ -204,8 +232,24 @@ function listExercises(db: LocalDB, params: URLSearchParams): Exercise[] {
   if (search) list = list.filter((e) => e.name.toLowerCase().includes(search));
   if (muscle) list = list.filter((e) => e.muscle_group === muscle);
   return list
-    .map((e) => withVideo(db, e))
+    .map((e) => withOverrides(db, e))
     .sort((a, b) => a.muscle_group.localeCompare(b.muscle_group) || a.name.localeCompare(b.name));
+}
+
+/**
+ * Ids of the exercises actually *worked* that day, in the order they were worked.
+ * Mirrors `performed_order` in backend/app/routers/exercises.py: the session list
+ * order is user-reorderable, so the real sequence is when each first set landed.
+ */
+function performedOrder(workout: StoredWorkout): number[] {
+  return workout.exercises
+    .filter((we) => we.sets.length > 0)
+    .map((we) => ({
+      id: we.id,
+      first: we.sets.reduce((min, s) => (s.completed_at < min ? s.completed_at : min), we.sets[0].completed_at),
+    }))
+    .sort((a, b) => a.first.localeCompare(b.first))
+    .map((e) => e.id);
 }
 
 function exerciseHistory(db: LocalDB, exerciseId: number, limit: number): ExerciseHistoryEntry[] {
@@ -215,9 +259,16 @@ function exerciseHistory(db: LocalDB, exerciseId: number, limit: number): Exerci
     .filter((w) => w.finished_at !== null)
     .sort((a, b) => b.started_at.localeCompare(a.started_at));
   for (const workout of finished) {
+    const order = performedOrder(workout);
     for (const we of workout.exercises) {
       if (we.exercise_id !== exerciseId || we.sets.length === 0) continue;
-      entries.push({ workout_id: workout.id, date: workout.started_at, sets: copySets(we.sets) });
+      entries.push({
+        workout_id: workout.id,
+        date: workout.started_at,
+        sets: copySets(we.sets),
+        position: order.indexOf(we.id) + 1,
+        total_exercises: order.length,
+      });
     }
     if (entries.length >= limit) break;
   }
@@ -351,12 +402,17 @@ export async function localApi<T>(
           rest_seconds_default: body.rest_seconds_default ?? 120,
           is_custom: true,
           video_url: null,
+          setup: [],
         };
+        // validated before the exercise is stored, so a bad row cannot leave a
+        // half-created custom exercise behind
+        const setup = cleanSetup(body.setup);
         db.customExercises.push(exercise);
         const video = cleanVideoUrl(body.video_url);
         if (video !== null) db.exerciseVideos[exercise.id] = video;
+        if (setup.length) db.exerciseSetups[exercise.id] = setup;
         saveDb();
-        return withVideo(db, exercise);
+        return withOverrides(db, exercise);
       }
       const exerciseId = Number(seg[1]);
       if (seg.length === 2 && method === "GET") return getExercise(db, exerciseId);
@@ -366,6 +422,11 @@ export async function localApi<T>(
           const video = cleanVideoUrl(body.video_url);
           if (video === null) delete db.exerciseVideos[exerciseId];
           else db.exerciseVideos[exerciseId] = video;
+        }
+        if ("setup" in body) {
+          const setup = cleanSetup(body.setup);
+          if (setup.length === 0) delete db.exerciseSetups[exerciseId];
+          else db.exerciseSetups[exerciseId] = setup;
         }
         saveDb();
         return getExercise(db, exerciseId);

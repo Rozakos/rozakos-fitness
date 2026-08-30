@@ -74,7 +74,12 @@ earlier trailers — do not reintroduce them.
   "scales a bit weird". New layouts must survive it: no fixed-width rows of controls, icon rows
   wrap (`flexWrap` + `minWidth` on the text block, see `workout-exercise-card.tsx`), modals cap
   at `maxWidth: 520` / `maxHeight: "85%"` and scroll inside.
-- **Keep `npx expo lint` and `npx tsc --noEmit` clean** — both pass as of v1.7. `mobile/`
+- **`WorkoutExercise.order` is not the order the work happened in.** It is the card list the
+  user drags around mid-session. Anything that cares about the actual sequence (fatigue,
+  "3rd of 6" in history) must derive it from the first set's `completed_at` — see
+  `performed_order` in `backend/app/routers/exercises.py` and `performedOrder` in
+  `local/api.ts`, which must stay in step.
+- **Keep `npx expo lint` and `npx tsc --noEmit` clean** — both pass as of v1.8. `mobile/`
   ships without eslint in `node_modules` after a fresh clone; `npm install` restores it.
 
 ### Android release build (this machine)
@@ -132,6 +137,15 @@ earlier trailers — do not reintroduce them.
   icon on a card plays the link via `Linking.openURL`, or opens the sheet to paste one.
   `main.py:add_missing_columns` back-fills `video_url` on an existing SQLite file, since
   `create_all` never alters tables.
+- [x] v1.8 (2026-08-30): **machine setup rows** (`Exercise.setup`, a JSON list of
+  `{label, value}` — "Seat height / 4"; capped at 12 rows, edited from the info sheet and
+  the exercise detail screen, summarized inline on every workout card so the settings are
+  readable without opening anything; mirrored in `local/api.ts` under `db.exerciseSetups`).
+  **Performed order**: `GET /exercises/{id}/history` now returns `position` /
+  `total_exercises`, derived from when each exercise's first set landed — never from
+  `WorkoutExercise.order`, which the user reorders freely. **Blank intensity now means
+  failure**: a working set logged with the box empty sends `rpe: 10` (RIR 0); a blank
+  warm-up still sends `null`. `add_missing_columns` back-fills `setup` as `TEXT`.
 - [x] Built and installed as a release APK on the owner's phone (Galaxy Z Flip3) — see the
   Android build recipe below. Never smoke-tested via Expo Go, which is fine; the APK is the
   delivery path.
