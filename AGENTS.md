@@ -82,6 +82,27 @@ earlier trailers — do not reintroduce them.
 - **Keep `npx expo lint` and `npx tsc --noEmit` clean** — both pass as of v1.8. `mobile/`
   ships without eslint in `node_modules` after a fresh clone; `npm install` restores it.
 
+### CI
+
+`.github/workflows/verify.yml` runs on every push to `main`, every PR, and on
+demand. Three parallel jobs on `ubuntu-latest`: backend pytest, mobile
+`tsc --noEmit` + `expo lint`, and the local-mode parity check. It exists because
+**this repo takes pushes from more than one machine** — nothing else notices a
+commit that arrives broken from the other environment.
+
+`scripts/check-local-mode.mjs` is the former manual trick, committed: it compiles
+`local/api.ts` to CommonJS, stubs `react-native` as `Platform.OS === "web"` so the
+store lands in an in-memory `localStorage`, and asserts the same behaviour the
+backend tests assert — including the no-aliasing rule. Run it by hand any time you
+touch `local/api.ts`: `node scripts/check-local-mode.mjs`. It needs `npm ci` in
+`mobile/` first (it invokes that TypeScript install directly rather than via npx,
+which Node will not spawn as a `.cmd` on Windows without a shell).
+
+The Android build deliberately stays **off** CI: it is the one thing the Windows
+box does worse than a Linux runner would, but wiring it up means putting the
+upload keystore and the Play service-account key into GitHub secrets. Worth doing
+when releases get frequent; see the note in `docs/release.md`.
+
 ### Releasing
 
 `scripts/release.ps1 -Version X.Y.Z [-Track internal]` does the whole chain:
