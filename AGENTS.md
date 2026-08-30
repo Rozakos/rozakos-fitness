@@ -103,6 +103,21 @@ box does worse than a Linux runner would, but wiring it up means putting the
 upload keystore and the Play service-account key into GitHub secrets. Worth doing
 when releases get frequent; see the note in `docs/release.md`.
 
+### Jenkins (self-hosted, alongside the Actions gate)
+
+`https://jenkins.rozakos.eu` — job **rozakos-fitness**, defined by the
+`Jenkinsfile` in this repo. Runs the same four checks as `verify.yml`: backend
+pytest, `tsc --noEmit`, `expo lint`, and `scripts/check-local-mode.mjs`.
+
+Both CIs run deliberately. Actions is free on a public repo and catches commits
+from the other environment; Jenkins runs on owned hardware. They already differ
+usefully: **Actions pins Python 3.12** (dev-box parity) while the Debian 13
+controller runs **3.13**, so the backend suite is exercised on both.
+
+Triggered by a GitHub webhook (`/github-webhook/`) through the Cloudflare
+Tunnel, with SCM polling every 4h as a fallback. Jenkins denies anonymous read,
+so the public hostname exposes nothing without login.
+
 ### Releasing
 
 `scripts/release.ps1 -Version X.Y.Z [-Track internal]` does the whole chain:
