@@ -5,9 +5,16 @@ from ..database import get_db
 from ..models import Routine, RoutineExercise, User
 from ..schemas import RoutineIn, RoutineOut
 from ..security import get_current_user
-from .exercises import get_visible_exercise
+from .exercises import apply_exercise_preferences, get_visible_exercise
 
 router = APIRouter(prefix="/routines", tags=["routines"])
+
+
+def with_exercise_preferences(db: Session, user: User, routines: list[Routine]) -> list[Routine]:
+    apply_exercise_preferences(
+        db, user, [row.exercise for routine in routines for row in routine.exercises]
+    )
+    return routines
 
 
 def get_own_routine(db: Session, user: User, routine_id: int) -> Routine:
@@ -37,12 +44,13 @@ def apply_exercises(db: Session, user: User, routine: Routine, body: RoutineIn) 
 
 @router.get("", response_model=list[RoutineOut])
 def list_routines(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return (
+    routines = (
         db.query(Routine)
         .filter(Routine.user_id == user.id)
         .order_by(Routine.created_at.desc())
         .all()
     )
+    return with_exercise_preferences(db, user, routines)
 
 
 @router.post("", response_model=RoutineOut, status_code=status.HTTP_201_CREATED)
@@ -54,14 +62,15 @@ def create_routine(
     apply_exercises(db, user, routine, body)
     db.commit()
     db.refresh(routine)
-    return routine
+    return with_exercise_preferences(db, user, [routine])[0]
 
 
 @router.get("/{routine_id}", response_model=RoutineOut)
 def get_routine(
     routine_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ):
-    return get_own_routine(db, user, routine_id)
+    routine = get_own_routine(db, user, routine_id)
+    return with_exercise_preferences(db, user, [routine])[0]
 
 
 @router.put("/{routine_id}", response_model=RoutineOut)
@@ -76,7 +85,7 @@ def update_routine(
     apply_exercises(db, user, routine, body)
     db.commit()
     db.refresh(routine)
-    return routine
+    return with_exercise_preferences(db, user, [routine])[0]
 
 
 @router.delete("/{routine_id}", status_code=status.HTTP_204_NO_CONTENT)

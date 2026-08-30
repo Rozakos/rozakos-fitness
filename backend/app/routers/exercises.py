@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import set_committed_value
 
 from ..database import get_db
-from ..models import Exercise, User, Workout, WorkoutExercise, WorkoutSet
+from ..models import Exercise, ExercisePreference, User, Workout, WorkoutExercise, WorkoutSet
 from ..schemas import (
     ExerciseCreate,
     ExerciseHistoryEntry,
@@ -29,6 +30,29 @@ def get_visible_exercise(db: Session, user: User, exercise_id: int) -> Exercise:
     return exercise
 
 
+def apply_exercise_preferences(
+    db: Session, user: User, exercises: list[Exercise]
+) -> list[Exercise]:
+    """Overlay the user's fields without dirtying shared catalog rows."""
+    builtins = {exercise.id: exercise for exercise in exercises if not exercise.is_custom}
+    if not builtins:
+        return exercises
+    preferences = {
+        preference.exercise_id: preference
+        for preference in db.query(ExercisePreference)
+        .filter(
+            ExercisePreference.user_id == user.id,
+            ExercisePreference.exercise_id.in_(builtins),
+        )
+        .all()
+    }
+    for exercise_id, exercise in builtins.items():
+        preference = preferences.get(exercise_id)
+        set_committed_value(exercise, "video_url", preference.video_url if preference else None)
+        set_committed_value(exercise, "setup", preference.setup if preference else None)
+    return exercises
+
+
 @router.get("", response_model=list[ExerciseOut])
 def list_exercises(
     search: str | None = None,
@@ -41,7 +65,8 @@ def list_exercises(
         q = q.filter(Exercise.name.ilike(f"%{search}%"))
     if muscle_group:
         q = q.filter(Exercise.muscle_group == muscle_group)
-    return q.order_by(Exercise.muscle_group, Exercise.name).all()
+    exercises = q.order_by(Exercise.muscle_group, Exercise.name).all()
+    return apply_exercise_preferences(db, user, exercises)
 
 
 @router.post("", response_model=ExerciseOut, status_code=status.HTTP_201_CREATED)
@@ -54,7 +79,7 @@ def create_exercise(
     db.add(exercise)
     db.commit()
     db.refresh(exercise)
-    return exercise
+    return apply_exercise_preferences(db, user, [exercise])[0]
 
 
 @router.get("/{exercise_id}", response_model=ExerciseOut)
@@ -63,7 +88,8 @@ def get_exercise(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return get_visible_exercise(db, user, exercise_id)
+    exercise = get_visible_exercise(db, user, exercise_id)
+    return apply_exercise_preferences(db, user, [exercise])[0]
 
 
 @router.patch("/{exercise_id}", response_model=ExerciseOut)
@@ -73,19 +99,34 @@ def update_exercise(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Attach (or clear) the form-demo video link and the machine setup rows.
-    Built-in exercises are shared rows, so both apply server-wide — intended for
-    personal deployments."""
+    """Attach or clear the user's form-demo link and machine setup rows."""
     exercise = get_visible_exercise(db, user, exercise_id)
+    target: Exercise | ExercisePreference = exercise
+    if not exercise.is_custom:
+        target = (
+            db.query(ExercisePreference)
+            .filter(
+                ExercisePreference.user_id == user.id,
+                ExercisePreference.exercise_id == exercise.id,
+            )
+            .first()
+        )
+        if target is None:
+            requested_video = body.video_url if "video_url" in body.model_fields_set else None
+            requested_setup = body.setup if "setup" in body.model_fields_set else None
+            if requested_video is None and not requested_setup:
+                return apply_exercise_preferences(db, user, [exercise])[0]
+            target = ExercisePreference(user_id=user.id, exercise_id=exercise.id)
+            db.add(target)
     if "video_url" in body.model_fields_set:
-        exercise.video_url = body.video_url
+        target.video_url = body.video_url
     if "setup" in body.model_fields_set:
-        # stored as NULL rather than [] so "never recorded" reads the same as it
-        # did for every exercise predating the column
-        exercise.setup = [entry.model_dump() for entry in body.setup] or None
+        target.setup = [entry.model_dump() for entry in body.setup] or None
+    if isinstance(target, ExercisePreference) and target.video_url is None and target.setup is None:
+        db.delete(target)
     db.commit()
     db.refresh(exercise)
-    return exercise
+    return apply_exercise_preferences(db, user, [exercise])[0]
 
 
 def performed_order(workout: Workout) -> list[int]:

@@ -211,7 +211,8 @@ The manual recipe below still describes what the script automates.
   delivery path.
 - [x] Store-launch backend hardening (2026-08-31): no fallback JWT secret, bounded auth
   rate limits, complete account deletion from Profile plus a public deletion page, SQLite
-  WAL/foreign-key pragmas, and repeatable systemd/backup/Cloudflare deployment files.
+  WAL/foreign-key pragmas, per-account setup/video preferences for built-in exercises, and
+  repeatable systemd/backup/Cloudflare deployment files.
 - [ ] **v1.6/v1.7 are installed but not runtime-verified.** No test runner exists in `mobile/`, so
   the bodyweight math, the ± toggle, the rest timer's new `durationMs` first frame, the routine
   editor's render-time seeding, and now the info sheet / video buttons have only been typechecked

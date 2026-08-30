@@ -14,7 +14,7 @@ from ..schemas import (
     WeekVolume,
 )
 from ..security import get_current_user
-from .exercises import get_visible_exercise
+from .exercises import apply_exercise_preferences, get_visible_exercise
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -54,6 +54,7 @@ def personal_records(db: Session = Depends(get_db), user: User = Depends(get_cur
     result = []
     for exercise_id, records in best.items():
         exercise = db.get(Exercise, exercise_id)
+        apply_exercise_preferences(db, user, [exercise])
         result.append(
             ExercisePRs(
                 exercise=ExerciseOut.model_validate(exercise),

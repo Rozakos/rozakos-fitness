@@ -9,6 +9,7 @@ from app.models import (
     ApiKey,
     BodyweightEntry,
     Exercise,
+    ExercisePreference,
     Routine,
     RoutineExercise,
     User,
@@ -94,6 +95,12 @@ def test_delete_account_removes_all_owned_data(client, auth):
         user.bodyweight_entries.append(BodyweightEntry(date=date(2026, 8, 31), weight_kg=80))
         builtin = db.query(Exercise).filter(Exercise.is_custom.is_(False)).first()
         assert builtin is not None
+        preference = ExercisePreference(
+            exercise_id=builtin.id,
+            video_url="https://youtu.be/private",
+            setup=[{"label": "Seat", "value": "4"}],
+        )
+        user.exercise_preferences.append(preference)
         routine = Routine(name="Private routine")
         routine.exercises.append(RoutineExercise(exercise_id=builtin.id))
         user.routines.append(routine)
@@ -105,6 +112,7 @@ def test_delete_account_removes_all_owned_data(client, auth):
         db.commit()
         owned_ids = {
             "exercise": custom.id,
+            "preference": preference.id,
             "api_key": user.api_keys[0].id,
             "bodyweight": user.bodyweight_entries[0].id,
             "routine": user.routines[0].id,
@@ -121,6 +129,7 @@ def test_delete_account_removes_all_owned_data(client, auth):
     with SessionLocal() as db:
         assert db.get(User, user_id) is None
         assert db.get(Exercise, owned_ids["exercise"]) is None
+        assert db.get(ExercisePreference, owned_ids["preference"]) is None
         assert db.get(ApiKey, owned_ids["api_key"]) is None
         assert db.get(BodyweightEntry, owned_ids["bodyweight"]) is None
         assert db.get(Routine, owned_ids["routine"]) is None

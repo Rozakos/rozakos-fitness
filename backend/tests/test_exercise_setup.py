@@ -56,6 +56,38 @@ def test_setup_validation(client, headers):
     assert client.patch(f"/exercises/{press}", json={"setup": too_many}, headers=headers).status_code == 422
 
 
+def test_builtin_preferences_are_isolated_between_users(client, headers):
+    press = first_exercise_id(client, headers)
+    first_values = {
+        "video_url": "https://youtu.be/first",
+        "setup": [{"label": "Seat", "value": "4"}],
+    }
+    assert client.patch(f"/exercises/{press}", json=first_values, headers=headers).status_code == 200
+
+    other = client.post(
+        "/auth/register",
+        json={"email": "other@example.com", "password": "password123", "display_name": "Other"},
+    ).json()
+    other_headers = {"Authorization": f"Bearer {other['access_token']}"}
+    other_view = client.get(f"/exercises/{press}", headers=other_headers).json()
+    assert other_view["video_url"] is None
+    assert other_view["setup"] == []
+    assert client.patch(f"/exercises/{press}", json={}, headers=other_headers).status_code == 200
+    assert (
+        client.patch(f"/exercises/{press}", json={"video_url": None}, headers=other_headers).status_code
+        == 200
+    )
+
+    second_values = {
+        "video_url": "https://youtu.be/second",
+        "setup": [{"label": "Seat", "value": "9"}],
+    }
+    client.patch(f"/exercises/{press}", json=second_values, headers=other_headers)
+    first_view = client.get(f"/exercises/{press}", headers=headers).json()
+    assert first_view["video_url"] == first_values["video_url"]
+    assert first_view["setup"] == first_values["setup"]
+
+
 def test_setup_on_custom_exercise_and_unknown_id(client, headers):
     res = client.post(
         "/exercises",

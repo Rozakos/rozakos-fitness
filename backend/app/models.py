@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -28,6 +28,9 @@ class User(Base):
     custom_exercises: Mapped[list["Exercise"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan", foreign_keys="Exercise.owner_id"
     )
+    exercise_preferences: Mapped[list["ExercisePreference"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class ApiKey(Base):
@@ -54,16 +57,27 @@ class Exercise(Base):
     rest_seconds_default: Mapped[int] = mapped_column(Integer, default=120)
     is_custom: Mapped[bool] = mapped_column(Boolean, default=False)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
-    # form-demo link (YouTube or any http(s) URL), set from the app. Built-in
-    # exercises are shared rows, so a link on one is visible to every account on
-    # this server — fine for a personal deployment, see docs/api.md.
+    # Custom-exercise values live here. Built-in values are overlaid from
+    # ExercisePreference so accounts never share personal links or setup rows.
     video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # Machine setup recorded once and read back at the rack: a list of
-    # {"label": ..., "value": ...} rows ("Seat height" / "4"). Shared across
-    # accounts on built-in rows for the same reason video_url is — see docs/api.md.
+    # {"label": ..., "value": ...} rows ("Seat height" / "4").
     setup: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
 
     owner: Mapped[User | None] = relationship(back_populates="custom_exercises", foreign_keys=[owner_id])
+
+
+class ExercisePreference(Base):
+    __tablename__ = "exercise_preferences"
+    __table_args__ = (UniqueConstraint("user_id", "exercise_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"), index=True)
+    video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    setup: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="exercise_preferences")
 
 
 class Routine(Base):

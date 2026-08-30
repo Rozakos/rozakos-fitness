@@ -30,8 +30,8 @@ trusted proxy IPs so `request.client` contains the original client address.
 
 `GET /account-deletion` is the public web flow used by the Play listing. It authenticates
 the user and invokes the same deletion endpoint. Account deletion removes the user row,
-password hash, workouts and sets, routines, bodyweight entries, custom exercises, and device
-API keys. No server-side account data is retained.
+password hash, workouts and sets, routines, bodyweight entries, custom exercises, built-in
+exercise preferences, and device API keys. No server-side account data is retained.
 
 ## Exercises
 
@@ -46,9 +46,8 @@ API keys. No server-side account data is retained.
 Every `ExerciseOut` (including the copies nested in routine, workout and PR payloads)
 carries `video_url`: a full `http(s)` URL, usually YouTube, that the app opens with the
 OS handler. A bare `youtube.com/...` is rejected with `422` because the phone cannot open
-it. Note that **built-in exercises are shared rows**, so a link set on one is visible to
-every account on that server — intended for a personal deployment. Custom exercises are
-per-owner and unaffected.
+it. Links on built-in exercises are stored per user, so accounts never see or overwrite
+one another's preferences. Custom exercises remain per-owner.
 
 Every `ExerciseOut` also carries `setup`: the machine adjustments to dial in before the
 first set, as an ordered list of `{label, value}` rows — e.g.
@@ -57,8 +56,8 @@ fields are trimmed, must be non-empty after trimming, and cap at 40 characters; 
 **12 rows** per exercise. `value` is a string rather than a number because gyms label these
 inconsistently ("4", "wide", "3rd hole"). `setup` is **always an array, never `null`** on
 the way out — exercises predating the column read as `[]`. `PATCH` **replaces the whole
-list**; there is no per-row endpoint, and `[]` or `null` clears it. The same shared-row
-caveat as `video_url` applies.
+list**; there is no per-row endpoint, and `[]` or `null` clears it. Built-in setup rows are
+stored per user, like `video_url`.
 
 `position` / `total_exercises` on a history entry record **where the lift actually fell in
 that day's session** (`position: 1` opened the workout). This is derived from when each

@@ -19,9 +19,21 @@ from ..schemas import (
     WorkoutUpdate,
 )
 from ..security import get_current_user
-from .exercises import get_visible_exercise
+from .exercises import apply_exercise_preferences, get_visible_exercise
 
 router = APIRouter(prefix="/workouts", tags=["workouts"])
+
+
+def with_exercise_preferences(db: Session, user: User, workout: Workout) -> Workout:
+    apply_exercise_preferences(db, user, [row.exercise for row in workout.exercises])
+    return workout
+
+
+def with_workout_exercise_preferences(
+    db: Session, user: User, workout_exercise: WorkoutExercise
+) -> WorkoutExercise:
+    apply_exercise_preferences(db, user, [workout_exercise.exercise])
+    return workout_exercise
 
 
 def get_own_workout(db: Session, user: User, workout_id: int) -> Workout:
@@ -74,7 +86,7 @@ def start_workout(
     db.add(workout)
     db.commit()
     db.refresh(workout)
-    return workout
+    return with_exercise_preferences(db, user, workout)
 
 
 @router.get("", response_model=list[WorkoutSummary])
@@ -96,14 +108,15 @@ def list_workouts(
 
 @router.get("/active", response_model=WorkoutOut | None)
 def active_workout(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return get_active_workout(db, user)
+    workout = get_active_workout(db, user)
+    return with_exercise_preferences(db, user, workout) if workout else None
 
 
 @router.get("/{workout_id}", response_model=WorkoutOut)
 def get_workout(
     workout_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ):
-    return get_own_workout(db, user, workout_id)
+    return with_exercise_preferences(db, user, get_own_workout(db, user, workout_id))
 
 
 @router.patch("/{workout_id}", response_model=WorkoutOut)
@@ -118,7 +131,7 @@ def update_workout(
         workout.notes = body.notes
     db.commit()
     db.refresh(workout)
-    return workout
+    return with_exercise_preferences(db, user, workout)
 
 
 @router.post("/{workout_id}/finish", response_model=WorkoutOut)
@@ -133,7 +146,7 @@ def finish_workout(
     workout.finished_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(workout)
-    return workout
+    return with_exercise_preferences(db, user, workout)
 
 
 @router.delete("/{workout_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -167,7 +180,7 @@ def add_exercise(
     db.add(we)
     db.commit()
     db.refresh(we)
-    return we
+    return with_workout_exercise_preferences(db, user, we)
 
 
 def get_own_workout_exercise(
@@ -202,7 +215,7 @@ def update_exercise(
         we.superset_group = body.superset_group
     db.commit()
     db.refresh(we)
-    return we
+    return with_workout_exercise_preferences(db, user, we)
 
 
 @router.delete("/{workout_id}/exercises/{we_id}", status_code=status.HTTP_204_NO_CONTENT)
