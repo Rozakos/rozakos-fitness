@@ -40,7 +40,9 @@ install -o root -g root -m 0644 "$APP_DIR/deploy/rozakos-fitness-backup.service"
 install -o root -g root -m 0644 "$APP_DIR/deploy/rozakos-fitness-backup.timer" /etc/systemd/system/rozakos-fitness-backup.timer
 
 systemctl daemon-reload
-systemctl enable --now rozakos-fitness.service rozakos-fitness-backup.timer
+systemctl enable rozakos-fitness.service
+systemctl restart rozakos-fitness.service
+systemctl enable --now rozakos-fitness-backup.timer
 
 for _ in {1..20}; do
   if curl --fail --silent http://127.0.0.1:8002/ >/dev/null; then
