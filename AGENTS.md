@@ -105,18 +105,31 @@ when releases get frequent; see the note in `docs/release.md`.
 
 ### Jenkins (self-hosted, alongside the Actions gate)
 
-`https://jenkins.rozakos.eu` — job **rozakos-fitness**, defined by the
-`Jenkinsfile` in this repo. Runs the same four checks as `verify.yml`: backend
-pytest, `tsc --noEmit`, `expo lint`, and `scripts/check-local-mode.mjs`.
+`https://jenkins.rozakos.eu` — job **`rozakos-fitness-MB`**, a *multibranch*
+pipeline defined by the `Jenkinsfile` in this repo. Runs the same four checks as
+`verify.yml`: backend pytest, `tsc --noEmit`, `expo lint`, and
+`scripts/check-local-mode.mjs`.
 
 Both CIs run deliberately. Actions is free on a public repo and catches commits
 from the other environment; Jenkins runs on owned hardware. They already differ
 usefully: **Actions pins Python 3.12** (dev-box parity) while the Debian 13
 controller runs **3.13**, so the backend suite is exercised on both.
 
-Triggered by a GitHub webhook (`/github-webhook/`) through the Cloudflare
-Tunnel, with SCM polling every 4h as a fallback. Jenkins denies anonymous read,
-so the public hostname exposes nothing without login.
+Triggered by a GitHub webhook (`/github-webhook/`) through the Cloudflare Tunnel;
+the multibranch job also rescans every 5 minutes as a fallback. Jenkins denies
+anonymous read, so the public hostname exposes nothing without login.
+
+**Multibranch, not a plain pipeline job, and the reason matters:** Jenkins' git
+polling runs `git ls-remote -h`, which lists heads only and *cannot see tags at
+all*. A pipeline-from-SCM job therefore never notices a pushed tag however its
+branch specs are configured. Multibranch discovers branches and tags as separate
+jobs. Here that mainly buys branch discovery — this repo takes pushes from a
+second environment — since **this repo publishes no CI release artifact**: the
+deliverable is the Play `.aab`, and CI does not build Android (that needs the
+upload keystore, see `docs/release.md`). The firmware repos do publish on tags.
+
+⚠️ If you ever add build strategies to that job, note they are a **whitelist**:
+configuring only a tag strategy silently stops branches building.
 
 ### Releasing
 
