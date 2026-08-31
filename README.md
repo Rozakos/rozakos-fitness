@@ -47,6 +47,9 @@ uvicorn app.main:app --host 0.0.0.0 --reload
 ```
 
 - Interactive API docs: http://localhost:8000/docs (full reference: [docs/api.md](docs/api.md))
+- Production API: `https://fitness-api.rozakos.eu` (interactive docs at
+  `https://fitness-api.rozakos.eu/docs`). The installed app uses this URL unless an
+  `EXPO_PUBLIC_API_URL` override is supplied.
 - The database (`fitness.db`) is created and seeded with exercises on first start. After
   pulling a schema change, delete the file — it's dev-only and there are no migrations yet.
 - Configuration: copy `backend/.env.example` to `backend/.env`. `ROZAKOS_SECRET_KEY` is
@@ -64,8 +67,9 @@ npx expo start
 
 Scan the QR code with **Expo Go** on your phone. The app auto-derives the API URL from the
 Metro dev server's LAN IP, so if the phone can load the app it can reach the backend — just
-run uvicorn with `--host 0.0.0.0`. To point elsewhere, set `EXPO_PUBLIC_API_URL`
-(see `mobile/src/api/config.ts`).
+run uvicorn with `--host 0.0.0.0`. Release builds fall back to the public production
+API; to point a development build elsewhere, set `EXPO_PUBLIC_API_URL` (see
+`mobile/src/api/config.ts`).
 
 ### Try the device flow (no hardware needed)
 

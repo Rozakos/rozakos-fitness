@@ -13,6 +13,7 @@ The production API runs on VM 100 alongside the existing services:
 The database enables WAL, foreign keys, a five-second busy timeout, and normal synchronous
 mode on every SQLite connection. The systemd unit trusts forwarded client addresses only
 from loopback, which is required for meaningful auth rate limits behind `cloudflared`.
+The public API is for store clients; it is not a private tailnet-only service.
 
 ## First install
 

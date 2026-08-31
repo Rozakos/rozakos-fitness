@@ -1,6 +1,8 @@
 # Rozakos Fitness — API Reference
 
-Base URL: `http://<host>:8000`. Interactive OpenAPI docs live at `/docs`.
+Production base URL: `https://fitness-api.rozakos.eu`. Interactive OpenAPI docs live at
+`https://fitness-api.rozakos.eu/docs`. For local development, use
+`http://<host>:8000` (or `http://localhost:8000`).
 
 Two authentication schemes:
 
@@ -37,7 +39,7 @@ exercise preferences, and device API keys. No server-side account data is retain
 
 | Method & path | Notes |
 |---|---|
-| `GET /exercises?search=&muscle_group=` | Built-ins (61 seeded) + your custom exercises |
+| `GET /exercises?search=&muscle_group=` | Built-ins (~250 seeded) + your custom exercises |
 | `POST /exercises` | `{name, muscle_group, equipment, rest_seconds_default, video_url?, setup?}` → custom, visible only to you |
 | `GET /exercises/{id}` | |
 | `PATCH /exercises/{id}` | `{video_url?, setup?}` — blank/`null` clears either; omitting a key leaves it untouched |
@@ -136,8 +138,10 @@ Keys are SHA-256 hashed at rest; `last_used_at` updates on every authenticated c
 ## WebSocket: live workout channel
 
 ```
-ws://<host>:8000/ws/workout/{workout_id}?token=<JWT>        # phone
-ws://<host>:8000/ws/workout/{workout_id}?api_key=<rzk_...>  # device
+wss://fitness-api.rozakos.eu/ws/workout/{workout_id}?token=<JWT>        # production phone
+wss://fitness-api.rozakos.eu/ws/workout/{workout_id}?api_key=<rzk_...>  # production device
+ws://<host>:8000/ws/workout/{workout_id}?token=<JWT>                    # local phone
+ws://<host>:8000/ws/workout/{workout_id}?api_key=<rzk_...>              # local device
 ```
 
 One room per workout; everyone in the room receives every broadcast. Bad credentials or a

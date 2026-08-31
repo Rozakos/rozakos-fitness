@@ -111,7 +111,16 @@ Then in Play Console: **Testing → Internal testing → Create new release**, u
 `rozakos-fitness-v1.8.0.aab`, and roll it out. You will also have to clear the
 one-time listing chores Play requires before anything can go out — store listing
 copy, icon and feature graphic, content rating questionnaire, data safety form,
-target audience, and a privacy policy URL.
+target audience, and a privacy policy URL. In the Data safety section, provide the
+public account-deletion URL exactly as:
+
+```
+https://fitness-api.rozakos.eu/account-deletion
+```
+
+The page signs the user in and permanently removes their account and server-side data.
+The privacy-policy URL is a separate, publicly reachable page and still needs to be
+supplied with the listing.
 
 Every release after that can go through `-Track internal`.
 

@@ -212,7 +212,9 @@ The manual recipe below still describes what the script automates.
 - [x] Store-launch backend hardening (2026-08-31): no fallback JWT secret, bounded auth
   rate limits, complete account deletion from Profile plus a public deletion page, SQLite
   WAL/foreign-key pragmas, per-account setup/video preferences for built-in exercises, and
-  repeatable systemd/backup/Cloudflare deployment files.
+  repeatable systemd/backup/Cloudflare deployment files. The public API is live at
+  `https://fitness-api.rozakos.eu`; its deletion page is
+  `https://fitness-api.rozakos.eu/account-deletion` for the Play listing.
 - [ ] **v1.6/v1.7 are installed but not runtime-verified.** No test runner exists in `mobile/`, so
   the bodyweight math, the ± toggle, the rest timer's new `durationMs` first frame, the routine
   editor's render-time seeding, and now the info sheet / video buttons have only been typechecked
@@ -241,6 +243,9 @@ Worth knowing because each one is easy to reintroduce:
    a bodyweight exercise still sends raw weight, so those sets under-report volume/PRs. Decide
    whether to move the rule into `backend/app/routers/stats.py` + `local/api.ts` instead.
 3. Test `examples/raspi_camera_mediapipe.py` on the Pi with a camera; calibrate --angle-low/high.
-4. Candidate items: programs with phases/roadmaps, trend smoothing, HealthKit/Health Connect,
+4. Before changing an existing installed build from local-only to account-backed mode, provide
+   an export/import or migration path for its local workout history; otherwise that history stays
+   on the phone and is not present in the server account.
+5. Candidate items: programs with phases/roadmaps, trend smoothing, HealthKit/Health Connect,
    import from Strong/Hevy CSV. Nutrition/AI/social remain deliberately out of scope.
-5. Keep this Status section updated as work progresses.
+6. Keep this Status section updated as work progresses.
