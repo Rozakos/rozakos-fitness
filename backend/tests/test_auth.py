@@ -255,6 +255,7 @@ def test_public_privacy_and_password_reset_pages(client):
     assert privacy.status_code == 200
     assert "Rozakos Fitness Privacy Policy" in privacy.text
     assert "/account-deletion" in privacy.text
+    assert "Resend processes email addresses" in privacy.text
 
     reset = client.get("/reset-password")
     assert reset.status_code == 200

@@ -232,8 +232,9 @@ The manual recipe below still describes what the script automates.
   unused permissions stripped, branded launcher/adaptive/splash assets and 1024×500 feature
   graphic, public and in-app Privacy Policy, documented Data safety and Health declaration
   answers, email confirmation plus one-use password recovery, and CI coverage through
-  `scripts/check-play-readiness.mjs`. SMTP credentials still have to be provisioned before
-  `ROZAKOS_REQUIRE_EMAIL_VERIFICATION=true` is enabled in production.
+  `scripts/check-play-readiness.mjs`. Resend SMTP is live in production from the verified
+  `fitness.rozakos.eu` sending domain; new accounts must confirm their email, and password
+  recovery was exercised through the public endpoint.
 - [ ] **v1.6/v1.7 are installed but not runtime-verified.** No test runner exists in `mobile/`, so
   the bodyweight math, the ± toggle, the rest timer's new `durationMs` first frame, the routine
   editor's render-time seeding, and now the info sheet / video buttons have only been typechecked

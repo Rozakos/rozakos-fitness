@@ -194,7 +194,7 @@ def privacy_policy_page() -> HTMLResponse:
   <p>Data is not sold, used for advertising, or used to build advertising profiles.</p>
 
   <h2>Sharing and service providers</h2>
-  <p>Data is not shared with other users. Cloudflare processes network traffic as a service provider for encrypted delivery and abuse protection. The configured transactional email provider processes email addresses and essential confirmation or recovery messages on the developer's behalf. Data may also be disclosed when required by law or when necessary to protect users and the service. Rozakos Fitness does not include advertising or third-party analytics SDKs.</p>
+  <p>Data is not shared with other users. Cloudflare processes network traffic as a service provider for encrypted delivery and abuse protection. Resend processes email addresses and essential confirmation or recovery messages as the transactional email provider acting on the developer's behalf. Data may also be disclosed when required by law or when necessary to protect users and the service. Rozakos Fitness does not include advertising or third-party analytics SDKs.</p>
 
   <h2>Security and retention</h2>
   <p>Account traffic is encrypted in transit with HTTPS. Passwords use bcrypt hashes, device API keys use SHA-256 hashes, and access tokens are stored in Android secure storage. Server data is backed up daily for recovery, with up to 30 backup copies retained.</p>

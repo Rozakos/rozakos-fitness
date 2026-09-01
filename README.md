@@ -118,7 +118,7 @@ Backend settings via environment variables (prefix `ROZAKOS_`) or `backend/.env`
 | `ROZAKOS_DATABASE_URL` | `sqlite:///./fitness.db` | Any SQLAlchemy URL; Postgres is a drop-in |
 | `ROZAKOS_SECRET_KEY` | *(required)* | At least 32 characters; no fallback |
 | `ROZAKOS_ACCESS_TOKEN_EXPIRE_MINUTES` | 10080 (7 days) | |
-| `ROZAKOS_REQUIRE_EMAIL_VERIFICATION` | `false` | Enable only after SMTP is configured and tested |
+| `ROZAKOS_REQUIRE_EMAIL_VERIFICATION` | `false` | Production enables this after configuring Resend SMTP |
 | `ROZAKOS_SMTP_HOST` / `PORT` | — / `587` | Transactional email relay |
 | `ROZAKOS_SMTP_USERNAME` / `PASSWORD` | — | Relay credentials; never commit them |
 | `ROZAKOS_SMTP_FROM_EMAIL` | — | Verified sender used for confirmation and recovery |

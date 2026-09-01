@@ -77,8 +77,9 @@ notifications, or another SDK, reassess the form before uploading it.
    `docs/store-listing.md`.
 4. Complete Privacy Policy, Data safety, Health apps, Ads, Target audience, Content rating,
    App access, and Account deletion declarations with the answers above.
-5. Configure and test SMTP before enabling `ROZAKOS_REQUIRE_EMAIL_VERIFICATION`; verify SPF,
-   DKIM, and DMARC for the sending domain and test confirmation, resend, and reset links.
+5. Keep the verified Resend sender healthy: monitor delivery, verify SPF/DKIM/DMARC for
+   `fitness.rozakos.eu`, and re-test confirmation, resend, and reset links after credential or
+   DNS changes.
 6. Run `scripts/release.ps1 -Version X.Y.Z`, manually upload the first AAB to Internal testing,
    and let Play run pre-launch reports.
 7. Satisfy any closed-testing requirement shown for the developer account, then promote through

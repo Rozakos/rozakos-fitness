@@ -65,21 +65,28 @@ failed database separately until the restored copy passes `PRAGMA integrity_chec
 
 ## Transactional email
 
-Email confirmation is deliberately disabled until a real sender is configured. The API
-refuses to start if confirmation is enabled without both an SMTP host and From address.
-Add these to `/etc/rozakos-fitness.env` without committing their values:
+Production uses Resend over authenticated SMTP. The sending domain is
+`fitness.rozakos.eu`, and confirmation is required for new accounts. SPF, DKIM, and the
+bounce MX record are managed through Resend's Cloudflare integration. Add the following to
+`/etc/rozakos-fitness.env`; the API key is a send-only secret and must never be committed:
 
 ```dotenv
-ROZAKOS_SMTP_HOST=smtp.example.com
+ROZAKOS_SMTP_HOST=smtp.resend.com
 ROZAKOS_SMTP_PORT=587
-ROZAKOS_SMTP_USERNAME=...
-ROZAKOS_SMTP_PASSWORD=...
-ROZAKOS_SMTP_FROM_EMAIL=Rozakos Fitness <verified-sender@example.com>
+ROZAKOS_SMTP_USERNAME=resend
+ROZAKOS_SMTP_PASSWORD=<send-only Resend API key>
+ROZAKOS_SMTP_FROM_EMAIL="Rozakos Fitness <noreply@fitness.rozakos.eu>"
 ROZAKOS_SMTP_STARTTLS=true
 ROZAKOS_REQUIRE_EMAIL_VERIFICATION=true
 ```
 
-Set `ROZAKOS_PUBLIC_BASE_URL` only if the public API hostname changes. Existing accounts are
-marked verified by the one-time schema backfill; new accounts require the emailed link after
-the flag is enabled. Password-reset mail also uses SMTP, but its endpoint keeps returning the
-same generic response when an address is unknown.
+The service refuses to start if confirmation is enabled without both an SMTP host and From
+address. Existing accounts were marked verified by the one-time schema backfill; new accounts
+require the emailed link. Password-reset mail uses the same relay, but its endpoint always
+returns the same generic response so it cannot disclose whether an address is registered.
+
+The initial API key was placed directly in `/etc/rozakos-fitness.env`, owned by
+`root:rozakos-fitness` with mode `0640`. Rotate it in Resend and replace only the password line
+if it is ever disclosed. Start DMARC at `v=DMARC1; p=none;` on
+`_dmarc.fitness.rozakos.eu`, monitor it, and tighten the policy after legitimate delivery is
+confirmed.
