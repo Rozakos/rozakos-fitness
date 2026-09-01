@@ -28,16 +28,47 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode(), password_hash.encode())
 
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(user_id: int, auth_version: int = 0) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
-    payload = {"sub": str(user_id), "exp": expire}
+    payload = {"sub": str(user_id), "ver": auth_version, "exp": expire}
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
-def decode_access_token(token: str) -> int | None:
+def create_action_token(
+    user_id: int,
+    purpose: str,
+    *,
+    expires_minutes: int,
+    fingerprint: str | None = None,
+) -> str:
+    payload = {
+        "sub": str(user_id),
+        "purpose": purpose,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=expires_minutes),
+    }
+    if fingerprint is not None:
+        payload["fingerprint"] = fingerprint
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+
+
+def decode_action_token(token: str, purpose: str) -> tuple[int, str | None] | None:
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        return int(payload["sub"])
+        if payload.get("purpose") != purpose:
+            return None
+        return int(payload["sub"]), payload.get("fingerprint")
+    except (jwt.PyJWTError, KeyError, ValueError):
+        return None
+
+
+def password_fingerprint(password_hash: str) -> str:
+    return hashlib.sha256(password_hash.encode()).hexdigest()
+
+
+def decode_access_token(token: str) -> tuple[int, int] | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        return int(payload["sub"]), int(payload.get("ver", 0))
     except (jwt.PyJWTError, KeyError, ValueError):
         return None
 
@@ -53,10 +84,13 @@ def hash_api_key(plaintext: str) -> str:
 
 
 def user_from_token(token: str, db: Session) -> User | None:
-    user_id = decode_access_token(token)
-    if user_id is None:
+    decoded = decode_access_token(token)
+    if decoded is None:
         return None
-    return db.get(User, user_id)
+    user = db.get(User, decoded[0])
+    if user is None or user.auth_version != decoded[1]:
+        return None
+    return user
 
 
 def user_from_api_key(key: str, db: Session) -> User | None:

@@ -18,9 +18,13 @@ Warm-up sets (`is_warmup: true`) are excluded from every stats endpoint.
 
 | Method & path | Body | Returns |
 |---|---|---|
-| `POST /auth/register` | `{email, password (≥8), display_name}` | `201` `{access_token, token_type, user}` — `409` if email taken |
-| `POST /auth/login` | `{email, password}` | `{access_token, token_type, user}` — `401` on bad credentials |
+| `POST /auth/register` | `{email, password (≥8), display_name}` | `201` registration result. With confirmation enabled, `access_token` is `null` and `email_verification_required` is `true`; otherwise it contains a login token. `409` if email taken. |
+| `POST /auth/login` | `{email, password}` | `{access_token, token_type, user}` — `401` on bad credentials; `403` until a required email confirmation is complete |
 | `GET /auth/me` | — | current user |
+| `GET /auth/verify-email?token=...` | Link from confirmation email | Confirms the address and shows a browser result page |
+| `POST /auth/resend-verification` | `{email}` | Always `202`; does not disclose whether the address is registered |
+| `POST /auth/forgot-password` | `{email}` | Always `202`; sends a one-hour reset link when the account exists |
+| `POST /auth/reset-password` | `{token, password (≥8)}` | Replaces the password; a successful reset invalidates the link |
 | `DELETE /auth/account` | — | `204`; permanently deletes the account and all owned data |
 
 Tokens expire after 7 days by default (`ROZAKOS_ACCESS_TOKEN_EXPIRE_MINUTES`).
@@ -30,7 +34,12 @@ includes `Retry-After`. The limiter is in-process and assumes the documented sin
 SQLite deployment. When running behind a local reverse proxy or tunnel, configure Uvicorn's
 trusted proxy IPs so `request.client` contains the original client address.
 
-`GET /account-deletion` is the public web flow used by the Play listing. It authenticates
+`GET /privacy`, `GET /account-deletion`, and `GET /reset-password` are public HTML
+resources for the Play listing and account lifecycle. Password-reset tokens stay in the
+URL fragment until the page submits them in a POST body, so proxies do not receive them in
+the initial URL.
+
+`GET /account-deletion` authenticates
 the user and invokes the same deletion endpoint. Account deletion removes the user row,
 password hash, workouts and sets, routines, bodyweight entries, custom exercises, built-in
 exercise preferences, and device API keys. No server-side account data is retained.

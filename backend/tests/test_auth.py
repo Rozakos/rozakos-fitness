@@ -1,4 +1,5 @@
 from datetime import date
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from pydantic import ValidationError
@@ -17,6 +18,7 @@ from app.models import (
     WorkoutExercise,
     WorkoutSet,
 )
+from app.routers import auth as auth_router
 
 
 def test_secret_key_is_required_and_known_default_is_rejected(monkeypatch):
@@ -27,6 +29,12 @@ def test_secret_key_is_required_and_known_default_is_rejected(monkeypatch):
         Settings(_env_file=None, secret_key=INSECURE_DEVELOPMENT_SECRET)
     with pytest.raises(ValidationError):
         Settings(_env_file=None, secret_key=" " * 64)
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            secret_key="a-production-secret-that-is-at-least-32-characters",
+            require_email_verification=True,
+        )
 
 
 def test_register_login_me(client):
@@ -36,6 +44,8 @@ def test_register_login_me(client):
     )
     assert res.status_code == 201
     token = res.json()["access_token"]
+    assert res.json()["email_verification_required"] is False
+    assert res.json()["user"]["email_verified"] is True
 
     # duplicate email rejected
     res = client.post(
@@ -56,6 +66,97 @@ def test_register_login_me(client):
 
     res = client.get("/auth/me")
     assert res.status_code == 401
+
+
+def test_email_verification_flow(client, monkeypatch):
+    sent: list[dict[str, str]] = []
+    monkeypatch.setattr(auth_router.settings, "require_email_verification", True)
+    monkeypatch.setattr(
+        auth_router,
+        "send_email",
+        lambda **message: sent.append(message) or True,
+    )
+
+    res = client.post(
+        "/auth/register",
+        json={"email": "verify@example.com", "password": "password123", "display_name": "V"},
+    )
+    assert res.status_code == 201
+    assert res.json()["access_token"] is None
+    assert res.json()["email_verification_required"] is True
+    assert res.json()["user"]["email_verified"] is False
+    assert len(sent) == 1
+
+    res = client.post(
+        "/auth/login", json={"email": "verify@example.com", "password": "password123"}
+    )
+    assert res.status_code == 403
+
+    confirmation_url = sent[0]["text"].splitlines()[3]
+    parsed = urlparse(confirmation_url)
+    token = parse_qs(parsed.query)["token"][0]
+    res = client.get("/auth/verify-email", params={"token": token})
+    assert res.status_code == 200
+    assert "Email confirmed" in res.text
+
+    res = client.post(
+        "/auth/login", json={"email": "verify@example.com", "password": "password123"}
+    )
+    assert res.status_code == 200
+    assert res.json()["user"]["email_verified"] is True
+
+
+def test_password_reset_flow(client, auth, monkeypatch):
+    sent: list[dict[str, str]] = []
+    monkeypatch.setattr(auth_router.settings, "smtp_host", "smtp.example.com")
+    monkeypatch.setattr(
+        auth_router,
+        "send_email",
+        lambda **message: sent.append(message) or True,
+    )
+
+    res = client.post("/auth/forgot-password", json={"email": auth[1]["email"]})
+    assert res.status_code == 202
+    assert len(sent) == 1
+    reset_url = sent[0]["text"].splitlines()[3]
+    token = parse_qs(urlparse(reset_url).fragment)["token"][0]
+
+    res = client.post(
+        "/auth/reset-password", json={"token": token, "password": "new-password-123"}
+    )
+    assert res.status_code == 200
+    assert client.get("/auth/me", headers=auth[0]).status_code == 401
+    assert client.post(
+        "/auth/login", json={"email": auth[1]["email"], "password": "new-password-123"}
+    ).status_code == 200
+    assert client.post(
+        "/auth/reset-password", json={"token": token, "password": "another-password-123"}
+    ).status_code == 400
+
+
+def test_password_reset_does_not_disclose_unknown_email(client):
+    res = client.post("/auth/forgot-password", json={"email": "missing@example.com"})
+    assert res.status_code == 202
+    assert res.json()["detail"] == "If the account exists, a password reset email has been sent"
+
+
+def test_public_deletion_works_before_email_confirmation(client, monkeypatch):
+    monkeypatch.setattr(auth_router.settings, "require_email_verification", True)
+    monkeypatch.setattr(auth_router, "send_email", lambda **_message: True)
+    res = client.post(
+        "/auth/register",
+        json={"email": "unverified@example.com", "password": "password123", "display_name": "U"},
+    )
+    assert res.status_code == 201
+    assert res.json()["access_token"] is None
+
+    res = client.post(
+        "/auth/account-deletion",
+        json={"email": "unverified@example.com", "password": "password123"},
+    )
+    assert res.status_code == 204
+    with SessionLocal() as db:
+        assert db.query(User).filter(User.email == "unverified@example.com").first() is None
 
 
 def test_login_is_rate_limited(client):
@@ -147,6 +248,18 @@ def test_account_deletion_page(client):
     assert res.status_code == 200
     assert "Delete your Rozakos Fitness account" in res.text
     assert "no-store" in res.headers["Cache-Control"]
+
+
+def test_public_privacy_and_password_reset_pages(client):
+    privacy = client.get("/privacy")
+    assert privacy.status_code == 200
+    assert "Rozakos Fitness Privacy Policy" in privacy.text
+    assert "/account-deletion" in privacy.text
+
+    reset = client.get("/reset-password")
+    assert reset.status_code == 200
+    assert "Reset your password" in reset.text
+    assert "no-store" in reset.headers["Cache-Control"]
 
 
 def test_exercises_seeded_and_custom(client, headers):

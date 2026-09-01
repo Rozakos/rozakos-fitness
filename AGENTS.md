@@ -106,9 +106,9 @@ when releases get frequent; see the note in `docs/release.md`.
 ### Jenkins (self-hosted, alongside the Actions gate)
 
 `https://jenkins.rozakos.eu` — job **`rozakos-fitness-MB`**, a *multibranch*
-pipeline defined by the `Jenkinsfile` in this repo. Runs the same four checks as
-`verify.yml`: backend pytest, `tsc --noEmit`, `expo lint`, and
-`scripts/check-local-mode.mjs`.
+pipeline defined by the `Jenkinsfile` in this repo. Runs the same five checks as
+`verify.yml`: backend pytest, `tsc --noEmit`, `expo lint`,
+`scripts/check-local-mode.mjs`, and `scripts/check-play-readiness.mjs`.
 
 Both CIs run deliberately. Actions is free on a public repo and catches commits
 from the other environment; Jenkins runs on owned hardware. They already differ
@@ -175,15 +175,15 @@ The manual recipe below still describes what the script automates.
 - `version` and `versionCode` from `app.json` are baked into `android/app/build.gradle` **at
   prebuild time**, so bumping either requires a prebuild before Gradle runs.
 
-## Status (2026-07-13)
+## Status (2026-09-01)
 
 - [x] Backend: models, auth, exercises+seed, routines, workouts/sets/supersets, stats, bodyweight, device API keys, WebSocket live hub
-- [x] Backend tests: 12 passing (`backend/tests/`)
+- [x] Backend tests: 34 passing (`backend/tests/`)
 - [x] Example device client (`examples/raspi_rep_counter.py`)
 - [x] Mobile app: Expo SDK 57 (routes in `mobile/src/app/`), all screens built — auth, Home, active
   Workout (ghost values, rest timer, warmup/RPE, live WS badge), Routines + editor, Exercise library
   + detail (est-1RM chart, rep PRs), Profile (volume/muscle/bodyweight charts), Devices (API keys)
-- [x] `tsc --noEmit` clean; `expo export --platform web` bundles all 19 routes
+- [x] `tsc --noEmit` clean; `expo export --platform web` bundles all 24 routes
 - [x] End-to-end verified against live server: full REST flow, device REST set logging, and live WS
   (example client streamed reps → phone-side socket received `rep` + `set_logged`); see
   `.claude/skills/verify/SKILL.md` for the recipe
@@ -228,6 +228,12 @@ The manual recipe below still describes what the script automates.
   repeatable systemd/backup/Cloudflare deployment files. The public API is live at
   `https://fitness-api.rozakos.eu`; its deletion page is
   `https://fitness-api.rozakos.eu/account-deletion` for the Play listing.
+- [x] v1.9 Play readiness (2026-09-01): API 36 build configuration, Android backup disabled,
+  unused permissions stripped, branded launcher/adaptive/splash assets and 1024×500 feature
+  graphic, public and in-app Privacy Policy, documented Data safety and Health declaration
+  answers, email confirmation plus one-use password recovery, and CI coverage through
+  `scripts/check-play-readiness.mjs`. SMTP credentials still have to be provisioned before
+  `ROZAKOS_REQUIRE_EMAIL_VERIFICATION=true` is enabled in production.
 - [ ] **v1.6/v1.7 are installed but not runtime-verified.** No test runner exists in `mobile/`, so
   the bodyweight math, the ± toggle, the rest timer's new `durationMs` first frame, the routine
   editor's render-time seeding, and now the info sheet / video buttons have only been typechecked

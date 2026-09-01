@@ -1,14 +1,15 @@
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 
-import { api } from "@/api/client";
+import { api, ApiError } from "@/api/client";
 import type { TokenResponse } from "@/api/types";
 import { Button, Input } from "@/components/ui";
 import { useAuth } from "@/store/auth";
 import { colors, spacing } from "@/theme/colors";
 
 export default function Login() {
+  const router = useRouter();
   const signIn = useAuth((s) => s.signIn);
   const enterLocalMode = useAuth((s) => s.enterLocalMode);
   const [email, setEmail] = useState("");
@@ -26,6 +27,10 @@ export default function Login() {
       });
       await signIn(res.access_token, res.user);
     } catch (e) {
+      if (e instanceof ApiError && e.status === 403) {
+        router.navigate({ pathname: "/verify-email", params: { email: email.trim() } });
+        return;
+      }
       setError(e instanceof Error ? e.message : "Login failed");
     } finally {
       setBusy(false);
@@ -52,6 +57,9 @@ export default function Login() {
         <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button title="Log in" onPress={submit} loading={busy} disabled={!email || !password} />
+        <Link href="/forgot-password" style={styles.link}>
+          Forgot password?
+        </Link>
         <Link href="/register" style={styles.link}>
           New here? Create an account
         </Link>

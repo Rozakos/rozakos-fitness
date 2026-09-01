@@ -3,12 +3,20 @@ export interface User {
   email: string;
   display_name: string;
   created_at: string;
+  email_verified: boolean;
 }
 
 export interface TokenResponse {
   access_token: string;
   token_type: string;
   user: User;
+}
+
+export interface RegistrationResponse {
+  access_token: string | null;
+  token_type: string;
+  user: User;
+  email_verification_required: boolean;
 }
 
 /** One machine adjustment, e.g. `{ label: "Seat height", value: "4" }`. */

@@ -1,14 +1,16 @@
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Linking, Platform, StyleSheet, Text, View } from "react-native";
 
 import { api } from "@/api/client";
-import type { TokenResponse } from "@/api/types";
+import { PRIVACY_POLICY_URL } from "@/api/config";
+import type { RegistrationResponse } from "@/api/types";
 import { Button, Input } from "@/components/ui";
 import { useAuth } from "@/store/auth";
 import { colors, spacing } from "@/theme/colors";
 
 export default function Register() {
+  const router = useRouter();
   const signIn = useAuth((s) => s.signIn);
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -20,11 +22,15 @@ export default function Register() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api<TokenResponse>("/auth/register", {
+      const res = await api<RegistrationResponse>("/auth/register", {
         method: "POST",
         body: { email: email.trim(), password, display_name: displayName.trim() },
       });
-      await signIn(res.access_token, res.user);
+      if (res.email_verification_required || !res.access_token) {
+        router.replace({ pathname: "/verify-email", params: { email: email.trim() } });
+      } else {
+        await signIn(res.access_token, res.user);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Registration failed");
     } finally {
@@ -54,6 +60,15 @@ export default function Register() {
           onChangeText={setPassword}
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Text style={styles.privacy}>
+          Account mode sends your email, workouts, and bodyweight data to the Rozakos Fitness
+          server for sync, history, and stats. You can instead choose local mode on the login
+          screen. By creating an account, you agree to the{" "}
+          <Text style={styles.inlineLink} onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>
+            Privacy Policy
+          </Text>
+          .
+        </Text>
         <Button
           title="Sign up"
           onPress={submit}
@@ -74,4 +89,6 @@ const styles = StyleSheet.create({
   form: { gap: spacing.md },
   error: { color: colors.alert, textAlign: "center" },
   link: { color: colors.accentBright, textAlign: "center", marginTop: spacing.sm },
+  privacy: { color: colors.textFaint, fontSize: 12, lineHeight: 17, textAlign: "center" },
+  inlineLink: { color: colors.accentBright, textDecorationLine: "underline" },
 });

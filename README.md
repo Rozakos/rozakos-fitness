@@ -14,7 +14,7 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 | API server | Python, FastAPI, SQLAlchemy, SQLite | `backend/` |
 | Mobile app | React Native, Expo, TypeScript | `mobile/` |
 | Device examples | Python (requests + websockets) | `examples/` |
-| Docs | [API reference](docs/api.md) · [Device integration guide](docs/device-integration.md) · [Deployment](docs/deployment.md) | `docs/` |
+| Docs | [API reference](docs/api.md) · [Device integration guide](docs/device-integration.md) · [Deployment](docs/deployment.md) · [Google Play](docs/play-store.md) | `docs/` |
 
 ### Features (v1 — the Tracked strength-training core)
 
@@ -32,6 +32,8 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 - Rest timer with per-exercise defaults
 - **Local-only mode**: skip sign-up entirely — everything is stored on the phone
   (no account, no sync, no device API; the full built-in exercise catalog is bundled)
+- Account lifecycle: email confirmation, resend, one-use password recovery, in-app deletion,
+  and a public deletion flow for users without the app
 - **Device API**: per-user API keys; devices log sets over REST or stream live reps over
   WebSocket into the active workout
 
@@ -116,3 +118,7 @@ Backend settings via environment variables (prefix `ROZAKOS_`) or `backend/.env`
 | `ROZAKOS_DATABASE_URL` | `sqlite:///./fitness.db` | Any SQLAlchemy URL; Postgres is a drop-in |
 | `ROZAKOS_SECRET_KEY` | *(required)* | At least 32 characters; no fallback |
 | `ROZAKOS_ACCESS_TOKEN_EXPIRE_MINUTES` | 10080 (7 days) | |
+| `ROZAKOS_REQUIRE_EMAIL_VERIFICATION` | `false` | Enable only after SMTP is configured and tested |
+| `ROZAKOS_SMTP_HOST` / `PORT` | — / `587` | Transactional email relay |
+| `ROZAKOS_SMTP_USERNAME` / `PASSWORD` | — | Relay credentials; never commit them |
+| `ROZAKOS_SMTP_FROM_EMAIL` | — | Verified sender used for confirmation and recovery |

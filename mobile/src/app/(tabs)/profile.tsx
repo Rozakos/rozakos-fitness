@@ -1,8 +1,9 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { api } from "@/api/client";
+import { ACCOUNT_DELETION_URL, PRIVACY_POLICY_URL, SUPPORT_EMAIL } from "@/api/config";
 import { useBodyweight, usePRs, useWeeklyVolume } from "@/api/hooks";
 import { LabeledBars, TrendLine, WeeklyBars } from "@/components/charts";
 import { Button, Card, SectionTitle } from "@/components/ui";
@@ -173,6 +174,27 @@ export default function Profile() {
           Exiting keeps your data on this phone — come back to local mode any time.
         </Text>
       ) : null}
+
+      <SectionTitle>Privacy & support</SectionTitle>
+      <View style={styles.accountActions}>
+        <Button
+          title="Privacy Policy"
+          variant="secondary"
+          onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+        />
+        {!localMode ? (
+          <Button
+            title="Account deletion webpage"
+            variant="secondary"
+            onPress={() => void Linking.openURL(ACCOUNT_DELETION_URL)}
+          />
+        ) : null}
+        <Button
+          title="Contact support"
+          variant="ghost"
+          onPress={() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+        />
+      </View>
     </ScrollView>
   );
 }

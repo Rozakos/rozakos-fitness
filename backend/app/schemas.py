@@ -20,17 +20,38 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class EmailRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetRequest(BaseModel):
+    token: str
+    password: str = Field(min_length=8)
+
+
+class MessageResponse(BaseModel):
+    detail: str
+
+
 class UserOut(ORMModel):
     id: int
     email: EmailStr
     display_name: str
     created_at: datetime
+    email_verified: bool
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class RegistrationResponse(BaseModel):
+    access_token: str | None = None
+    token_type: str = "bearer"
+    user: UserOut
+    email_verification_required: bool
 
 
 # --- Exercises ---

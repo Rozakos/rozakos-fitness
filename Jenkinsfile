@@ -68,6 +68,14 @@ pipeline {
       }
     }
 
+    stage('Play readiness') {
+      steps {
+        // Guards the package identity, sensitive-data backup setting, permission
+        // removals, signing hook, store artwork, and required policy/deletion links.
+        sh 'node scripts/check-play-readiness.mjs'
+      }
+    }
+
     stage('Local-mode parity') {
       steps {
         // mobile/src/local/api.ts reimplements the whole REST surface on-phone

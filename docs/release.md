@@ -108,19 +108,17 @@ that one through the Console:
 ```
 
 Then in Play Console: **Testing → Internal testing → Create new release**, upload
-`rozakos-fitness-v1.8.0.aab`, and roll it out. You will also have to clear the
-one-time listing chores Play requires before anything can go out — store listing
-copy, icon and feature graphic, content rating questionnaire, data safety form,
-target audience, and a privacy policy URL. In the Data safety section, provide the
-public account-deletion URL exactly as:
+`rozakos-fitness-v1.8.0.aab`, and roll it out. Follow `docs/play-store.md` for the
+exact listing, health declaration, Data safety answers, testing, and review checklist.
+Use these public URLs:
 
 ```
+https://fitness-api.rozakos.eu/privacy
 https://fitness-api.rozakos.eu/account-deletion
 ```
 
-The page signs the user in and permanently removes their account and server-side data.
-The privacy-policy URL is a separate, publicly reachable page and still needs to be
-supplied with the listing.
+The deletion page signs the user in and permanently removes the account and server-side
+data. The privacy policy is also linked from registration and Profile inside the app.
 
 Every release after that can go through `-Track internal`.
 

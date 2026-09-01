@@ -2,7 +2,7 @@ name: Verify
 
 # The gate that catches a broken main. This repo takes pushes from more than one
 # machine, so "it passed locally" is not a claim anyone can make about someone
-# else's commit — this runs the same three checks on every one of them.
+# else's commit — this runs the full repository verification suite on every one.
 on:
   push:
     branches: [main]
@@ -67,6 +67,9 @@ jobs:
         run: npx expo lint
         env:
           EXPO_NO_TELEMETRY: '1'
+
+      - name: Play-readiness policy and Android config
+        run: node scripts/check-play-readiness.mjs
 
   # Guards the mirror in mobile/src/local/api.ts, which reimplements the REST
   # surface on-phone for local-only mode. It has no test runner of its own, so

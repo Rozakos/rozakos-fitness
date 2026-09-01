@@ -18,6 +18,14 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     display_name: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    auth_version: Mapped[int] = mapped_column(Integer, default=0)
+
+    @property
+    def email_verified(self) -> bool:
+        return self.email_verified_at is not None
 
     api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     workouts: Mapped[list["Workout"]] = relationship(back_populates="user", cascade="all, delete-orphan")

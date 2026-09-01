@@ -55,9 +55,31 @@ systemctl status rozakos-fitness.service
 journalctl -u rozakos-fitness.service -n 100 --no-pager
 systemctl list-timers rozakos-fitness-backup.timer
 curl --fail https://fitness-api.rozakos.eu/
+curl --fail https://fitness-api.rozakos.eu/privacy
 curl --fail https://fitness-api.rozakos.eu/account-deletion
 ```
 
 To restore, stop the API, copy a selected backup over the database as the service user,
 remove any stale `fitness.db-wal` and `fitness.db-shm` files, then start the API. Preserve the
 failed database separately until the restored copy passes `PRAGMA integrity_check`.
+
+## Transactional email
+
+Email confirmation is deliberately disabled until a real sender is configured. The API
+refuses to start if confirmation is enabled without both an SMTP host and From address.
+Add these to `/etc/rozakos-fitness.env` without committing their values:
+
+```dotenv
+ROZAKOS_SMTP_HOST=smtp.example.com
+ROZAKOS_SMTP_PORT=587
+ROZAKOS_SMTP_USERNAME=...
+ROZAKOS_SMTP_PASSWORD=...
+ROZAKOS_SMTP_FROM_EMAIL=Rozakos Fitness <verified-sender@example.com>
+ROZAKOS_SMTP_STARTTLS=true
+ROZAKOS_REQUIRE_EMAIL_VERIFICATION=true
+```
+
+Set `ROZAKOS_PUBLIC_BASE_URL` only if the public API hostname changes. Existing accounts are
+marked verified by the one-time schema backfill; new accounts require the emailed link after
+the flag is enabled. Password-reset mail also uses SMTP, but its endpoint keeps returning the
+same generic response when an address is unknown.

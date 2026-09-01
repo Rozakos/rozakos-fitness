@@ -20,3 +20,6 @@ function resolveApiUrl(): string {
 
 export const API_URL = resolveApiUrl();
 export const WS_URL = API_URL.replace(/^http/, "ws");
+export const PRIVACY_POLICY_URL = `${API_URL}/privacy`;
+export const ACCOUNT_DELETION_URL = `${API_URL}/account-deletion`;
+export const SUPPORT_EMAIL = "billmewtwo1996@gmail.com";
