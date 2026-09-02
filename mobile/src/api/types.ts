@@ -143,6 +143,16 @@ export interface ApiKeyInfo {
   key?: string; // only present right after creation
 }
 
+export interface LocalDataImportResult {
+  already_imported: boolean;
+  custom_exercises: number;
+  exercise_preferences: number;
+  routines: number;
+  workouts: number;
+  sets: number;
+  bodyweight: number;
+}
+
 export type LiveMessage =
   | { type: "rep"; exercise_id: number; count: number }
   | { type: "set_logged"; workout_exercise_id: number; exercise_id: number; set: WorkoutSet }

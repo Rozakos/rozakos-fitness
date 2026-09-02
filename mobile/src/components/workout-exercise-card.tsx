@@ -389,30 +389,49 @@ const styles = StyleSheet.create({
   setNumber: { color: colors.success, fontWeight: "800", width: 20, textAlign: "center" },
   setValue: { color: colors.text, fontSize: 15, minWidth: 64 },
   setRpe: { color: colors.textMuted, fontSize: 12, flex: 1 },
-  inputRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs, marginTop: spacing.sm },
+  // Six controls across. `flexWrap` is the safety valve: at an extreme system
+  // font scale the boxes drop to a second line instead of clipping their digits.
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    rowGap: spacing.sm,
+    marginTop: spacing.sm,
+  },
   warmupToggle: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 36,
     borderRadius: 6,
     backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
   },
   signToggle: {
-    width: 24,
-    height: 28,
+    width: 28,
+    height: 36,
     borderRadius: 6,
     backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
   },
   bodyweightHint: { color: colors.textFaint, fontSize: 11, marginTop: spacing.xs },
-  input: { flex: 1, paddingVertical: 8, textAlign: "center" },
+  // The shared Input's paddingHorizontal is spacing.md, which is right for a
+  // full-width field and wrong here: on a 360dp phone (Z Flip3) this row leaves
+  // the RPE box ~49dp, so 32dp of padding left ~17dp of actual text width and
+  // "10" clipped. The digits are centred, so the padding buys nothing anyway.
+  input: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.xs,
+    textAlign: "center",
+    minWidth: 44,
+  },
   logButton: {
     backgroundColor: colors.accent,
     borderRadius: 8,
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
   },

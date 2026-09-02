@@ -19,6 +19,18 @@ Dark charcoal `#2c2c3e` (backgrounds), crimson `#a5211f` (primary actions), teal
 (success/PRs), alert `#dc5a5a`, light surface `#f4f4f4`. Aesthetic: dark, minimal, clean
 sans-serif. All mobile theme tokens live in `mobile/src/theme/`.
 
+**The app mark** is the Rozakos Industries robot from rozakos.com — rounded-square head,
+ball-tipped antennae, white visor, crimson eyes — given a bodybuilder's upper body in a
+double-biceps pose, with the teal chevron on its abs. It is **generated, not hand-drawn**:
+`python scripts/make-logo.py` redraws every asset in `mobile/assets/store/` (store icon,
+adaptive foreground, monochrome, splash, favicon, Play feature graphic) from flat shapes in a
+1024-unit space. Edit the script, never the PNGs. Two things it gets right that are easy to
+lose: the arm segments separate by **value** (light shoulder+bicep, mid forearm, dark fist)
+rather than by outline, which is what keeps it legible at 48dp; and the monochrome variant
+knocks the visor *out* of the silhouette, because alpha is all that survives a themed icon and
+a filled head is just a block. The body uses a brighter crimson than `#a5211f` — the brand
+crimson is too close in value to the charcoal to read as a silhouette.
+
 ## Layout
 
 - `backend/` — FastAPI + SQLAlchemy 2.0 + SQLite (`create_all`, no migrations yet).
@@ -70,10 +82,28 @@ earlier trailers — do not reintroduce them.
   entered via the ± toggle (`decimal-pad` has no minus key). The set stores the real total
   (latest tracked bodyweight + added, floored at 0) so volume, PRs and est-1RM stay comparable
   with loaded lifts. With no bodyweight entry logged, only the added load is stored.
-- **The target phone is a Galaxy Z Flip3** — a narrow, very tall screen that the owner reports
-  "scales a bit weird". New layouts must survive it: no fixed-width rows of controls, icon rows
-  wrap (`flexWrap` + `minWidth` on the text block, see `workout-exercise-card.tsx`), modals cap
-  at `maxWidth: 520` / `maxHeight: "85%"` and scroll inside.
+- **The target phone is a Galaxy Z Flip3** — 360dp wide, and that number is the whole story.
+  `theme/layout.ts` holds it: `useLayout()` gives `compact` (< 380dp) and `tight` (compact *or*
+  system font scale > 1.15), and `chartWidth()` floors a chart canvas. New layouts must survive
+  it: no fixed-width rows of controls, icon rows wrap (`flexWrap` + `minWidth` on the text
+  block, see `workout-exercise-card.tsx`), modals cap at `maxWidth: 520` / `maxHeight: "85%"`
+  and scroll inside.
+  - **Four controls do not fit across 360dp.** Usable width is 328dp on screen, 296dp inside a
+    `Card`; four flex children leave ~68dp each. Rows of four wrap to 2×2 on `compact`
+    (`flexWrap` on the row + `flexBasis: "45%"` per child) — the routine editor's target fields
+    and the workout summary's stat tiles both do this.
+  - **`Input`'s `paddingHorizontal` is `spacing.md`, which is wrong inside a tight row.** In the
+    set-entry row that 32dp of padding left the RPE box ~17dp of actual text width. Compact
+    numeric boxes override it to `spacing.xs`; the digits are centred so the padding buys
+    nothing.
+  - **Android is edge-to-edge**, so insets come from `SafeAreaProvider` (mounted in
+    `app/_layout.tsx` with `initialWindowMetrics`) — never from a hardcoded `paddingTop`. A
+    full-screen `Modal` renders in its own native window and needs **its own** nested
+    `SafeAreaProvider`; see `exercise-picker.tsx`.
+- **A scroll container holding a text input needs `keyboardShouldPersistTaps="handled"`.** This
+  is listed separately above because it keeps recurring: Home (bodyweight box), Exercises
+  (search), Devices (device name) and the routine editor all shipped without it, and in each the
+  first tap on the adjacent button after typing was swallowed by the keyboard dismissal.
 - **`WorkoutExercise.order` is not the order the work happened in.** It is the card list the
   user drags around mid-session. Anything that cares about the actual sequence (fatigue,
   "3rd of 6" in history) must derive it from the first set's `completed_at` — see
@@ -175,10 +205,10 @@ The manual recipe below still describes what the script automates.
 - `version` and `versionCode` from `app.json` are baked into `android/app/build.gradle` **at
   prebuild time**, so bumping either requires a prebuild before Gradle runs.
 
-## Status (2026-09-01)
+## Status (2026-09-03)
 
 - [x] Backend: models, auth, exercises+seed, routines, workouts/sets/supersets, stats, bodyweight, device API keys, WebSocket live hub
-- [x] Backend tests: 34 passing (`backend/tests/`)
+- [x] Backend tests: 37 passing (`backend/tests/`)
 - [x] Example device client (`examples/raspi_rep_counter.py`)
 - [x] Mobile app: Expo SDK 57 (routes in `mobile/src/app/`), all screens built — auth, Home, active
   Workout (ghost values, rest timer, warmup/RPE, live WS badge), Routines + editor, Exercise library
@@ -235,6 +265,12 @@ The manual recipe below still describes what the script automates.
   `scripts/check-play-readiness.mjs`. Resend SMTP is live in production from the verified
   `fitness.rozakos.eu` sending domain; new accounts must confirm their email, and password
   recovery was exercised through the public endpoint.
+- [x] Local + cloud foundation (2026-09-03): account-mode GET responses are cached per account on
+  the phone for offline viewing and cleared at logout; Profile can atomically merge the retained
+  local-only database into the signed-in account. `POST /sync/import-local` maps local IDs,
+  preserves timestamps and relationships, gives existing cloud preferences/bodyweight priority,
+  rejects active-workout conflicts before writing, and stores the import result under a stable
+  idempotency key so retries cannot duplicate history. The original local database remains intact.
 - [ ] **v1.6/v1.7 are installed but not runtime-verified.** No test runner exists in `mobile/`, so
   the bodyweight math, the ± toggle, the rest timer's new `durationMs` first frame, the routine
   editor's render-time seeding, and now the info sheet / video buttons have only been typechecked
@@ -263,9 +299,9 @@ Worth knowing because each one is easy to reintroduce:
    a bodyweight exercise still sends raw weight, so those sets under-report volume/PRs. Decide
    whether to move the rule into `backend/app/routers/stats.py` + `local/api.ts` instead.
 3. Test `examples/raspi_camera_mediapipe.py` on the Pi with a camera; calibrate --angle-low/high.
-4. Before changing an existing installed build from local-only to account-backed mode, provide
-   an export/import or migration path for its local workout history; otherwise that history stays
-   on the phone and is not present in the server account.
+4. Extend the local + cloud foundation from offline reads/import into offline account writes:
+   add client-generated stable entity IDs, an outbox, deletion tombstones, incremental pulls, and
+   explicit conflict handling. Do not queue account mutations against server-only numeric IDs.
 5. Candidate items: programs with phases/roadmaps, trend smoothing, HealthKit/Health Connect,
    import from Strong/Hevy CSV. Nutrition/AI/social remain deliberately out of scope.
 6. Keep this Status section updated as work progresses.

@@ -26,7 +26,8 @@ over time. Bodyweight movements support added load and assisted weight.
 You choose how your data works:
 
 - Use local mode with no account, keeping your fitness log on that phone.
-- Create an account to sync with the Rozakos Fitness server and connect your own authorized
+- Create an account to sync with the Rozakos Fitness server, keep recent cloud results available
+  offline, merge history previously recorded in local mode, and connect your own authorized
   equipment, such as a Raspberry Pi rep counter, through personal API keys.
 - Delete your account and associated server data at any time from inside the app.
 

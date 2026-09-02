@@ -17,6 +17,9 @@ export default function Devices() {
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl }}
+      // the device-name box lives here: without "handled" the first tap on
+      // Create after typing a name is eaten by the keyboard dismissal
+      keyboardShouldPersistTaps="handled"
     >
       <Text style={styles.intro}>
         API keys let embedded devices (a Raspberry Pi rep camera, smart gym gear) log sets and

@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
+import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 
 import { Loading } from "@/components/ui";
 import { useAuth } from "@/store/auth";
@@ -64,10 +65,17 @@ function AuthGate() {
 }
 
 export default function RootLayout() {
+  // Android runs edge-to-edge, so every inset has to come from the provider
+  // rather than being assumed. `initialMetrics` lets the first frame use the
+  // real insets instead of zeroes, which otherwise shows as a visible jump on
+  // the login screen. Full-screen Modals need their own provider — they render
+  // outside this tree's host view (see ExercisePicker).
   return (
-    <QueryClientProvider client={queryClient}>
-      <StatusBar style="light" />
-      <AuthGate />
-    </QueryClientProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <QueryClientProvider client={queryClient}>
+        <StatusBar style="light" />
+        <AuthGate />
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }

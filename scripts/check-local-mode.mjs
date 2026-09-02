@@ -60,6 +60,7 @@ function compile() {
       "--ignoreConfig",
       "src/local/api.ts",
       "src/local/db.ts",
+      "src/local/account-cache.ts",
       "src/local/catalog.ts",
       "src/api/types.ts",
       "src/api/error.ts",
@@ -90,7 +91,14 @@ function compile() {
   );
 }
 
-async function run(localApi) {
+async function run(
+  localApi,
+  prepareLocalImport,
+  completeLocalImport,
+  cacheAccountResponse,
+  getCachedAccountResponse,
+  clearAccountCache,
+) {
   console.log("\nmachine setup rows");
   const bench = (await localApi("/exercises?search=Bench Press"))[0];
   check("a built-in exercise starts with an empty list", Array.isArray(bench.setup) && bench.setup.length === 0, bench.setup);
@@ -171,6 +179,26 @@ async function run(localApi) {
   await localApi(`/workouts/${second_workout.id}/finish`, { method: "POST", body: {} });
   const skipped = await localApi(`/exercises/${bench.id}/history`);
   check("an exercise with no sets is not counted", skipped[0].position === 1 && skipped[0].total_exercises === 1, skipped[0]);
+
+  console.log("\nlocal-to-account import snapshot");
+  const firstImport = prepareLocalImport(42);
+  check("a populated local database produces an import", firstImport !== null);
+  check("custom exercises are carried into the snapshot", firstImport.custom_exercises.length === 2, firstImport.custom_exercises);
+  check("workouts and their sets are copied", firstImport.workouts.length === 2 && firstImport.workouts[0].exercises.some((exercise) => exercise.sets.length > 0));
+  const retryImport = prepareLocalImport(42);
+  check("a retry keeps the same idempotency key", retryImport.import_id === firstImport.import_id);
+  completeLocalImport(42, firstImport.import_id);
+  check("a completed unchanged revision is not offered twice", prepareLocalImport(42) === null);
+  await localApi("/bodyweight", { method: "POST", body: { date: "2026-09-01", weight_kg: 81 } });
+  check("a later full snapshot cannot duplicate the first import", prepareLocalImport(42) === null);
+
+  console.log("\naccount offline cache");
+  cacheAccountResponse("account-42", "/workouts/active", null);
+  const cachedNull = getCachedAccountResponse("account-42", "/workouts/active");
+  check("cached null is distinct from a cache miss", cachedNull.found && cachedNull.value === null, cachedNull);
+  check("account caches are isolated", !getCachedAccountResponse("account-7", "/workouts/active").found);
+  clearAccountCache("account-42");
+  check("logout cleanup removes an account cache", !getCachedAccountResponse("account-42", "/workouts/active").found);
 }
 
 async function main() {
@@ -181,12 +209,22 @@ async function main() {
   globalThis.localStorage = {
     getItem: (key) => (store.has(key) ? store.get(key) : null),
     setItem: (key, value) => store.set(key, value),
+    removeItem: (key) => store.delete(key),
   };
 
   const require = createRequire(join(outDir, "noop.cjs"));
   const { localApi } = require(join(outDir, "local", "api.js"));
+  const { prepareLocalImport, completeLocalImport } = require(join(outDir, "local", "db.js"));
+  const { cacheAccountResponse, getCachedAccountResponse, clearAccountCache } = require(join(outDir, "local", "account-cache.js"));
 
-  await run(localApi);
+  await run(
+    localApi,
+    prepareLocalImport,
+    completeLocalImport,
+    cacheAccountResponse,
+    getCachedAccountResponse,
+    clearAccountCache,
+  );
 
   console.log(failures ? `\n${failures} check(s) FAILED` : "\nall local-mode checks passed");
   return failures === 0;

@@ -8,6 +8,7 @@ import type { Exercise } from "@/api/types";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { Button, Card, Input, SectionTitle } from "@/components/ui";
 import { colors, spacing } from "@/theme/colors";
+import { useLayout } from "@/theme/layout";
 
 interface EditableExercise extends RoutineExerciseInput {
   exercise: Exercise;
@@ -20,6 +21,7 @@ export default function RoutineEditor() {
   const { data: routines } = useRoutines();
   const saveRoutine = useSaveRoutine();
   const deleteRoutine = useDeleteRoutine();
+  const { compact } = useLayout();
 
   const [name, setName] = useState("");
   const [items, setItems] = useState<EditableExercise[]>([]);
@@ -77,6 +79,9 @@ export default function RoutineEditor() {
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl }}
+      // the name and target boxes live here, so without "handled" the first tap
+      // on Save (or on a reorder chevron) after typing is eaten by the keyboard
+      keyboardShouldPersistTaps="handled"
     >
       <Stack.Screen options={{ title: isNew ? "New routine" : "Edit routine" }} />
       <Input placeholder="Routine name (e.g. Push Day A)" value={name} onChangeText={setName} />
@@ -101,24 +106,30 @@ export default function RoutineEditor() {
               </Pressable>
             </View>
           </View>
+          {/* four across is ~68dp a field on a 360dp phone, which cannot hold
+              "Superset #" or a two-digit value; on compact screens they go 2×2 */}
           <View style={styles.targetRow}>
             <Field
               label="Sets"
+              compact={compact}
               value={item.target_sets}
               onChange={(v) => updateItem(index, { target_sets: v })}
             />
             <Field
               label="Reps min"
+              compact={compact}
               value={item.target_reps_min}
               onChange={(v) => updateItem(index, { target_reps_min: v })}
             />
             <Field
               label="Reps max"
+              compact={compact}
               value={item.target_reps_max}
               onChange={(v) => updateItem(index, { target_reps_max: v })}
             />
             <Field
               label="Superset #"
+              compact={compact}
               value={item.superset_group ?? 0}
               onChange={(v) => updateItem(index, { superset_group: v || null })}
             />
@@ -173,20 +184,26 @@ export default function RoutineEditor() {
 function Field({
   label,
   value,
+  compact,
   onChange,
 }: {
   label: string;
   value: number;
+  compact: boolean;
   onChange: (value: number) => void;
 }) {
   return (
-    <View style={{ flex: 1 }}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+    // 45% basis means exactly two fit per row once the parent wraps; on a wider
+    // phone flexBasis 0 restores the original four-across row.
+    <View style={{ flexGrow: 1, flexBasis: compact ? "45%" : 0 }}>
+      <Text style={styles.fieldLabel} numberOfLines={1}>
+        {label}
+      </Text>
       <Input
         keyboardType="number-pad"
         value={value ? String(value) : ""}
         onChangeText={(t) => onChange(parseInt(t, 10) || 0)}
-        style={{ textAlign: "center", paddingVertical: 6 }}
+        style={{ textAlign: "center", paddingVertical: 6, paddingHorizontal: spacing.sm }}
       />
     </View>
   );
@@ -196,6 +213,12 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   iconRow: { flexDirection: "row", gap: spacing.md },
   name: { color: colors.text, fontSize: 15, fontWeight: "700", flex: 1 },
-  targetRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  targetRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    rowGap: spacing.sm,
+    marginTop: spacing.sm,
+  },
   fieldLabel: { color: colors.textFaint, fontSize: 10, marginBottom: 2, textAlign: "center" },
 });

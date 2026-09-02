@@ -148,7 +148,11 @@ export function LabeledBars({
     <View style={{ gap: 6 }}>
       {data.map((d) => (
         <View key={d.label} style={styles.hRow}>
-          <Text style={styles.hLabel}>{d.label}</Text>
+          {/* one line always: a wrapped "shoulders" would make this row twice
+              the height of its neighbours and break the bars' shared baseline */}
+          <Text style={styles.hLabel} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+            {d.label}
+          </Text>
           <View style={styles.hTrack}>
             <View
               style={{
@@ -159,7 +163,9 @@ export function LabeledBars({
               }}
             />
           </View>
-          <Text style={styles.hValue}>{Math.round(d.value).toLocaleString()}</Text>
+          <Text style={styles.hValue} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+            {Math.round(d.value).toLocaleString()}
+          </Text>
         </View>
       ))}
     </View>
@@ -173,7 +179,16 @@ const styles = StyleSheet.create({
   xLabels: { flexDirection: "row", justifyContent: "space-between", paddingRight: PAD.right },
   axisText: { color: colors.textFaint, fontSize: 10 },
   hRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  hLabel: { color: colors.textMuted, fontSize: 12, width: 84 },
-  hTrack: { flex: 1 },
-  hValue: { color: colors.text, fontSize: 12, fontWeight: "600", width: 56, textAlign: "right" },
+  // 84dp on a roomy phone, giving way to the bar track on a narrow one
+  hLabel: { color: colors.textMuted, fontSize: 12, flexBasis: 84, flexGrow: 0, flexShrink: 1 },
+  hTrack: { flex: 1, minWidth: 40 },
+  hValue: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "600",
+    flexBasis: 56,
+    flexGrow: 0,
+    flexShrink: 0,
+    textAlign: "right",
+  },
 });

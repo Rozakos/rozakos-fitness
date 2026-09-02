@@ -10,7 +10,7 @@ from . import live
 from .config import get_settings
 from .database import Base, SessionLocal, engine
 from .rate_limit import auth_rate_limiter
-from .routers import auth, bodyweight, devices, exercises, routines, stats, workouts
+from .routers import auth, bodyweight, devices, exercises, routines, stats, sync, workouts
 from .seed import seed_exercises
 
 settings = get_settings()
@@ -74,6 +74,7 @@ app.include_router(workouts.router)
 app.include_router(stats.router)
 app.include_router(bodyweight.router)
 app.include_router(devices.router)
+app.include_router(sync.router)
 app.include_router(live.router)
 
 
@@ -175,12 +176,12 @@ def privacy_policy_page() -> HTMLResponse:
 </head>
 <body><main>
   <h1>Rozakos Fitness Privacy Policy</h1>
-  <p><strong>Effective date:</strong> 1 September 2026</p>
+  <p><strong>Effective date:</strong> 3 September 2026</p>
   <p>Rozakos Fitness is a strength-training log with an optional account for syncing workouts and connecting user-authorized exercise devices. It is not a medical service and does not provide medical advice.</p>
 
   <h2>Data you provide</h2>
   <p>In account mode, the service stores your email address, display name, a one-way password hash, routines, workouts, sets, notes, bodyweight entries, custom exercises, exercise setup preferences, form-video links, and names and access records for device API keys. Plaintext passwords and plaintext device keys are not stored.</p>
-  <p>In local-only mode, workout and bodyweight data stays in the app's private storage on that device and is not sent to the Rozakos Fitness server. Android cloud backup is disabled for the app. Opening an external form-video link sends a request to that external website under its own privacy terms.</p>
+  <p>In local-only mode, workout and bodyweight data stays in the app's private storage on that device and is not sent to the Rozakos Fitness server unless you explicitly copy it into an account. In account mode, the app keeps the latest successful cloud results in its private storage for offline viewing. Android cloud backup is disabled for the app. Opening an external form-video link sends a request to that external website under its own privacy terms.</p>
 
   <h2>Automatically processed data</h2>
   <p>The server and its network security provider may process limited connection information such as IP address, request time, requested path, response status, and security signals. This is used only to operate, protect, troubleshoot, and prevent abuse of the service.</p>
@@ -201,7 +202,7 @@ def privacy_policy_page() -> HTMLResponse:
   <p>Account data remains while the account is active. Deleting an account removes its associated data from the live database immediately; residual copies age out of rotating backups within 30 days and are used only for disaster recovery. Limited security and operational logs are retained only as needed for service protection and troubleshooting.</p>
 
   <h2>Your choices</h2>
-  <p>You can use local-only mode without creating an account. Account users can permanently delete their account and associated server data inside the app, or through the public <a href="/account-deletion">account deletion page</a>. Local-only data can be removed through Android's Clear storage action or by uninstalling the app.</p>
+  <p>You can use local-only mode without creating an account. Copying local-only history into an account is an explicit action and keeps the original phone copy. Account users can permanently delete their account and associated server data inside the app, or through the public <a href="/account-deletion">account deletion page</a>. Logging out clears that account's offline cache. Local-only data can be removed through Android's Clear storage action or by uninstalling the app.</p>
 
   <h2>Children</h2>
   <p>Rozakos Fitness is not directed to children under 13, and knowingly collecting their personal data is not intended.</p>

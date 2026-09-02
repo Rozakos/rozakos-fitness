@@ -8,6 +8,7 @@ import { ExerciseVideoLink } from "@/components/exercise-video";
 import { Card, SectionTitle } from "@/components/ui";
 import { formatPerformedOrder, fromKg, rpeToDisplay, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
+import { chartWidth } from "@/theme/layout";
 
 function shortDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -24,7 +25,7 @@ export default function ExerciseDetail() {
   const { unit, intensityMode } = useSettings();
 
   const exercisePRs = prs?.find((p) => p.exercise.id === exerciseId);
-  const chartWidth = width - spacing.md * 4;
+  const chartW = chartWidth(width, spacing.md * 4);
 
   return (
     <ScrollView
@@ -59,7 +60,7 @@ export default function ExerciseDetail() {
       <Card>
         <TrendLine
           points={(trend ?? []).map((t) => fromKg(t.best_est_1rm, unit))}
-          width={chartWidth}
+          width={chartW}
           unit={` ${unit}`}
           labels={
             trend && trend.length >= 2

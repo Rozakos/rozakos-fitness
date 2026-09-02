@@ -5,6 +5,7 @@ import { usePRs, useWorkout } from "@/api/hooks";
 import { Badge, Button, Card, Loading, SectionTitle } from "@/components/ui";
 import { fromKg, rpeToDisplay, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
+import { useLayout } from "@/theme/layout";
 
 const PR_REP_CAP = 12; // server clamps rep records at 12
 
@@ -14,6 +15,7 @@ export default function WorkoutSummary() {
   const { data: workout, isLoading } = useWorkout(Number(id));
   const { data: prs } = usePRs();
   const { unit, intensityMode } = useSettings();
+  const { compact } = useLayout();
 
   if (isLoading || !workout) return <Loading />;
 
@@ -49,14 +51,21 @@ export default function WorkoutSummary() {
       <Stack.Screen options={{ title: "Workout complete" }} />
       <Text style={styles.headline}>Nice work! 💪</Text>
 
+      {/* four across is ~76dp a tile on a 360dp phone — not enough for a volume
+          figure like "12,450 kg", so on compact screens the tiles go 2×2 */}
       <View style={styles.statRow}>
-        <Stat label="Duration" value={durationMin !== null ? `${durationMin} min` : "—"} />
-        <Stat label="Sets" value={String(workingSets.length)} />
+        <Stat
+          label="Duration"
+          compact={compact}
+          value={durationMin !== null ? `${durationMin} min` : "—"}
+        />
+        <Stat label="Sets" compact={compact} value={String(workingSets.length)} />
         <Stat
           label="Volume"
+          compact={compact}
           value={`${Math.round(fromKg(totalVolume, unit)).toLocaleString()} ${unit}`}
         />
-        <Stat label="PRs" value={String(prCount)} accent={prCount > 0} />
+        <Stat label="PRs" compact={compact} value={String(prCount)} accent={prCount > 0} />
       </View>
 
       {workout.notes ? (
@@ -91,10 +100,27 @@ export default function WorkoutSummary() {
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Stat({
+  label,
+  value,
+  compact,
+  accent,
+}: {
+  label: string;
+  value: string;
+  compact: boolean;
+  accent?: boolean;
+}) {
   return (
-    <View style={styles.stat}>
-      <Text style={[styles.statValue, accent && { color: colors.success }]}>{value}</Text>
+    <View style={[styles.stat, { flexBasis: compact ? "47%" : 0 }]}>
+      <Text
+        style={[styles.statValue, accent && { color: colors.success }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
+        {value}
+      </Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
@@ -102,9 +128,16 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
 
 const styles = StyleSheet.create({
   headline: { color: colors.text, fontSize: 24, fontWeight: "900", marginBottom: spacing.md },
-  statRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
+  statRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    rowGap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  // flexBasis is supplied per-tile so the same row is 4-up on a wide phone
   stat: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: spacing.sm,

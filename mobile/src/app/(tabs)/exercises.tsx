@@ -29,6 +29,9 @@ export default function Exercises() {
         keyExtractor={(e) => String(e.id)}
         stickySectionHeadersEnabled={false}
         contentContainerStyle={{ paddingVertical: spacing.sm }}
+        // the search box sits above this list, so without "handled" the first
+        // tap on a result only dismisses the keyboard
+        keyboardShouldPersistTaps="handled"
         renderSectionHeader={({ section }) => (
           <Text style={styles.sectionHeader}>{section.title}</Text>
         )}

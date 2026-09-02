@@ -144,6 +144,26 @@ bare added weight (or 0) makes those sets vanish from volume and PR stats.
 
 Keys are SHA-256 hashed at rest; `last_used_at` updates on every authenticated call.
 
+## Local data import
+
+| Method & path | Auth | Notes |
+|---|---|---|
+| `POST /sync/import-local` | JWT | Atomically merges one local database revision into the account |
+
+The request contains an `import_id` plus custom exercises, exercise preferences, routines,
+workouts (including sets), and bodyweight entries. The phone persists the `import_id` before
+sending. Repeating the same request for the same account returns `already_imported: true` and
+the original counts without inserting anything again.
+
+Local IDs are request-scoped and are translated to server IDs while preserving references from
+routines and workouts. Existing cloud exercise preferences and same-day bodyweight entries win
+conflicts. Finished-workout placeholders with no sets are dropped, matching the normal workout
+finish endpoint. Importing an active local workout returns `409` when the account already has an
+active workout; the entire import remains unapplied.
+
+The response reports counts for `custom_exercises`, `exercise_preferences`, `routines`,
+`workouts`, `sets`, and `bodyweight`. The original local-only database is not modified or deleted.
+
 ## WebSocket: live workout channel
 
 ```

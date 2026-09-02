@@ -32,6 +32,9 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 - Rest timer with per-exercise defaults
 - **Local-only mode**: skip sign-up entirely — everything is stored on the phone
   (no account, no sync, no device API; the full built-in exercise catalog is bundled)
+- **Local + cloud continuity**: account screens retain their latest successful cloud reads for
+  offline viewing, and local-only history can be merged into an account without deleting the
+  phone copy or duplicating data when an interrupted import is retried
 - Account lifecycle: email confirmation, resend, one-use password recovery, in-app deletion,
   and a public deletion flow for users without the app
 - **Device API**: per-user API keys; devices log sets over REST or stream live reps over

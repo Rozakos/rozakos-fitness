@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import type { User } from "../api/types";
+import { accountCacheKey, clearAccountCache } from "../local/account-cache";
 import { storage } from "./storage";
 
 const TOKEN_KEY = "rozakos_token";
@@ -51,11 +52,13 @@ export const useAuth = create<AuthState>((set) => ({
   },
   // Leaving local mode keeps the on-phone database; re-entering picks it back up.
   signOut: async () => {
+    const account = useAuth.getState().user;
     await Promise.all([
       storage.delete(TOKEN_KEY),
       storage.delete(USER_KEY),
       storage.delete(LOCAL_MODE_KEY),
     ]);
+    if (account !== null) clearAccountCache(accountCacheKey(account));
     set({ token: null, user: null, localMode: false });
   },
 }));

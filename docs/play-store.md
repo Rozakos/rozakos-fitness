@@ -11,7 +11,8 @@ the linked policies before each public release because target levels and declara
   from `mobile/app.json` before each build.
 - Minimum Android: API 24.
 - Architectures: the release bundle contains 64-bit ARM (`arm64-v8a`).
-- Android backup is disabled because local mode can hold sensitive fitness data.
+- Android backup is disabled because local mode and the account's offline-read cache can hold
+  sensitive fitness data.
 - The manifest requests only network access/state. Legacy storage, overlay, vibration, and
   unused biometric permissions contributed by dependencies are explicitly removed.
 

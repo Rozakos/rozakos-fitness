@@ -39,6 +39,9 @@ class User(Base):
     exercise_preferences: Mapped[list["ExercisePreference"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    local_data_imports: Mapped[list["LocalDataImport"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class ApiKey(Base):
@@ -178,3 +181,23 @@ class BodyweightEntry(Base):
     weight_kg: Mapped[float] = mapped_column(Float)
 
     user: Mapped[User] = relationship(back_populates="bodyweight_entries")
+
+
+class LocalDataImport(Base):
+    """Completed phone-to-account imports.
+
+    The client keeps one import id for a local database revision. Persisting the
+    result makes retrying after a lost HTTP response safe: the same history is
+    never inserted twice.
+    """
+
+    __tablename__ = "local_data_imports"
+    __table_args__ = (UniqueConstraint("user_id", "import_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    import_id: Mapped[str] = mapped_column(String(100))
+    result: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="local_data_imports")

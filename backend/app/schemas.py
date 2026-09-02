@@ -318,3 +318,78 @@ class BodyweightOut(ORMModel):
     id: int
     date: date
     weight_kg: float
+
+
+# --- Local data import ---
+
+class LocalExerciseImport(ExerciseCreate):
+    local_id: int
+
+
+class LocalExercisePreferenceImport(BaseModel):
+    exercise_id: int
+    video_url: str | None = None
+    setup: list[SetupEntry] | None = None
+
+    _normalize_video_url = field_validator("video_url")(_clean_video_url)
+    _normalize_setup = field_validator("setup")(_clean_setup)
+
+
+class LocalRoutineExerciseImport(RoutineExerciseIn):
+    pass
+
+
+class LocalRoutineImport(BaseModel):
+    local_id: int
+    name: str = Field(min_length=1, max_length=120)
+    created_at: datetime
+    exercises: list[LocalRoutineExerciseImport] = Field(default_factory=list, max_length=100)
+
+
+class LocalSetImport(SetIn):
+    set_number: int = Field(ge=1)
+    completed_at: datetime
+    source: str = Field(pattern="^(manual|device)$")
+
+
+class LocalWorkoutExerciseImport(BaseModel):
+    exercise_id: int
+    order: int = 0
+    superset_group: int | None = None
+    target_reps_min: int | None = None
+    target_reps_max: int | None = None
+    sets: list[LocalSetImport] = Field(default_factory=list, max_length=100)
+
+
+class LocalWorkoutImport(BaseModel):
+    local_id: int
+    routine_id: int | None = None
+    started_at: datetime
+    finished_at: datetime | None = None
+    notes: str | None = None
+    exercises: list[LocalWorkoutExerciseImport] = Field(default_factory=list, max_length=100)
+
+
+class LocalBodyweightImport(BodyweightIn):
+    pass
+
+
+class LocalDataImportRequest(BaseModel):
+    import_id: str = Field(min_length=1, max_length=100, pattern=r"^[A-Za-z0-9_.:-]+$")
+    custom_exercises: list[LocalExerciseImport] = Field(default_factory=list, max_length=1000)
+    exercise_preferences: list[LocalExercisePreferenceImport] = Field(
+        default_factory=list, max_length=1000
+    )
+    routines: list[LocalRoutineImport] = Field(default_factory=list, max_length=1000)
+    workouts: list[LocalWorkoutImport] = Field(default_factory=list, max_length=10000)
+    bodyweight: list[LocalBodyweightImport] = Field(default_factory=list, max_length=10000)
+
+
+class LocalDataImportResult(BaseModel):
+    already_imported: bool
+    custom_exercises: int
+    exercise_preferences: int
+    routines: int
+    workouts: int
+    sets: int
+    bodyweight: int

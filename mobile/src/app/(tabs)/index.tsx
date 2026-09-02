@@ -1,6 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {
   useActiveWorkout,
@@ -22,6 +23,16 @@ function formatDate(iso: string) {
   });
 }
 
+function formatDuration(startedAt: string, finishedAt: string | null) {
+  if (!finishedAt) return null;
+  const minutes = Math.round(
+    (new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 60000,
+  );
+  if (minutes < 1) return "under a minute";
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
 export default function Home() {
   const router = useRouter();
   const user = useAuth((s) => s.user);
@@ -36,7 +47,13 @@ export default function Home() {
   const thisWeek = volume?.length ? volume[volume.length - 1] : null;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={styles.content}
+      // the bodyweight box lives here: without "handled" the first tap on Log
+      // after typing a weight is swallowed dismissing the keyboard
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.greeting}>
         Welcome back, <Text style={{ color: colors.accentBright }}>{user?.display_name}</Text>
       </Text>
@@ -108,12 +125,33 @@ export default function Home() {
 
       <SectionTitle>Recent workouts</SectionTitle>
       {history?.length ? (
-        history.map((w) => (
-          <Card key={w.id}>
-            <Text style={styles.cardTitle}>{formatDate(w.started_at)}</Text>
-            {w.notes ? <Text style={styles.cardSub}>{w.notes}</Text> : null}
-          </Card>
-        ))
+        history.map((w) => {
+          const duration = formatDuration(w.started_at, w.finished_at);
+          return (
+            // these were dead cards before — the summary screen they open is
+            // the only place the session's sets and PRs can be read back
+            <Pressable
+              key={w.id}
+              onPress={() => router.navigate(`/workout-summary/${w.id}`)}
+              style={({ pressed }) => pressed && { opacity: 0.6 }}
+            >
+              <Card style={styles.historyCard}>
+                <View style={styles.historyText}>
+                  <Text style={styles.cardTitle}>{formatDate(w.started_at)}</Text>
+                  <Text style={styles.historyMeta}>
+                    {w.finished_at ? (duration ?? "finished") : "unfinished"}
+                  </Text>
+                  {w.notes ? (
+                    <Text style={styles.historyNotes} numberOfLines={2}>
+                      {w.notes}
+                    </Text>
+                  ) : null}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+              </Card>
+            </Pressable>
+          );
+        })
       ) : (
         <Text style={styles.cardSub}>No workouts yet — go lift something.</Text>
       )}
@@ -128,4 +166,8 @@ const styles = StyleSheet.create({
   cardSub: { color: colors.textMuted, fontSize: 13, marginBottom: spacing.sm },
   volumeNumber: { color: colors.success, fontSize: 28, fontWeight: "900" },
   bwRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
+  historyCard: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  historyText: { flex: 1, flexShrink: 1 },
+  historyMeta: { color: colors.textFaint, fontSize: 12 },
+  historyNotes: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs },
 });
