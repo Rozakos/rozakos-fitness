@@ -278,6 +278,12 @@ The manual recipe below still describes what the script automates.
   driving it from node with `react-native` stubbed — a repeatable trick when a change touches
   `local/api.ts`. Ask the owner what they saw on the phone.
 - [ ] MediaPipe client untested on real hardware (no camera here); angle thresholds need calibration
+- [ ] **The 2026-09-03 responsive pass has never been seen on a real screen.** The Z Flip3 fixes
+  (set-entry row padding, 2×2 target/stat rows, safe-area insets, the settings card, the rest-timer
+  bar) were verified only by flex arithmetic plus `tsc`, `expo lint` and a web export of all 24
+  routes — no phone was on `adb` and no browser was drivable at the time. Build a release APK,
+  `adb install -r`, and walk the screens listed in the responsive rules above before assuming any
+  of it is right. Owner deferred this to 2026-09-04.
 
 ## The v1.6 set-logging fix (2026-07-25) — three independent causes
 
@@ -293,15 +299,18 @@ Worth knowing because each one is easy to reintroduce:
 
 ## Next steps when picking up
 
-1. Ask the owner how v1.6 behaved on the phone (the unchecked item above) before building on top.
-2. **Bodyweight totals are computed client-side only** (`workout-exercise-card.tsx`): the phone
+1. **Put the responsive pass on the phone** (the unchecked item above) — it is the only thing in
+   the tree that has never been run on a real screen, and the owner's original report was that the
+   app "kinda doesn't scale correctly" on the Z Flip. Confirm the fix before layering more UI on it.
+2. Ask the owner how v1.6 behaved on the phone (the unchecked item above) before building on top.
+3. **Bodyweight totals are computed client-side only** (`workout-exercise-card.tsx`): the phone
    sends `weight_kg = bodyweight + added`. A Raspi device logging via `POST /device/sets` against
    a bodyweight exercise still sends raw weight, so those sets under-report volume/PRs. Decide
    whether to move the rule into `backend/app/routers/stats.py` + `local/api.ts` instead.
-3. Test `examples/raspi_camera_mediapipe.py` on the Pi with a camera; calibrate --angle-low/high.
-4. Extend the local + cloud foundation from offline reads/import into offline account writes:
+4. Test `examples/raspi_camera_mediapipe.py` on the Pi with a camera; calibrate --angle-low/high.
+5. Extend the local + cloud foundation from offline reads/import into offline account writes:
    add client-generated stable entity IDs, an outbox, deletion tombstones, incremental pulls, and
    explicit conflict handling. Do not queue account mutations against server-only numeric IDs.
-5. Candidate items: programs with phases/roadmaps, trend smoothing, HealthKit/Health Connect,
+6. Candidate items: programs with phases/roadmaps, trend smoothing, HealthKit/Health Connect,
    import from Strong/Hevy CSV. Nutrition/AI/social remain deliberately out of scope.
-6. Keep this Status section updated as work progresses.
+7. Keep this Status section updated as work progresses.
