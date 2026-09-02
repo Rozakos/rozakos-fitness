@@ -26,6 +26,13 @@ the linked policies before each public release because target levels and declara
 - Play icon: `mobile/assets/store/icon.png` (1024 x 1024)
 - Feature graphic: `mobile/assets/store/feature-graphic.png` (1024 x 500)
 
+Both, and every launcher/splash/favicon variant beside them, are **generated** by
+`python scripts/make-logo.py` — do not hand-edit the PNGs, they are overwritten on the next
+run. `node scripts/check-play-readiness.mjs` asserts the two Play dimensions above.
+See [docs/branding.md](branding.md). Play caches listing artwork separately from the bundle,
+so a brand change means re-uploading the icon and feature graphic in the Console as well as
+shipping a new build.
+
 Both public pages must continue to load without login, geography restrictions, or a PDF
 viewer. Account deletion removes all owned live data. Rotating disaster-recovery backups
 expire within 30 days.

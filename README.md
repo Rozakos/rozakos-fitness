@@ -5,7 +5,9 @@ first-class device API so embedded projects (e.g. a Raspberry Pi with a camera) 
 your reps and stream them live into your workout.
 
 Built to match the [rozakos.com](https://rozakos.com) brand: dark charcoal (`#2c2c3e`),
-crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — then lift them.
+crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). The app mark is the Rozakos Industries
+robot with a bodybuilder's upper body — generated from `scripts/make-logo.py`, never
+hand-edited (see [docs/branding.md](docs/branding.md)). *Build your ideas* — then lift them.
 
 ## What's inside
 
@@ -14,7 +16,7 @@ crimson accent (`#a5211f`), teal for PRs (`#2fb1a2`). *Build your ideas* — the
 | API server | Python, FastAPI, SQLAlchemy, SQLite | `backend/` |
 | Mobile app | React Native, Expo, TypeScript | `mobile/` |
 | Device examples | Python (requests + websockets) | `examples/` |
-| Docs | [API reference](docs/api.md) · [Device integration guide](docs/device-integration.md) · [Deployment](docs/deployment.md) · [Google Play](docs/play-store.md) | `docs/` |
+| Docs | [API reference](docs/api.md) · [Device integration guide](docs/device-integration.md) · [Deployment](docs/deployment.md) · [Google Play](docs/play-store.md) · [Releasing](docs/release.md) · [Branding](docs/branding.md) | `docs/` |
 
 ### Features (v1 — the Tracked strength-training core)
 
@@ -75,6 +77,17 @@ Metro dev server's LAN IP, so if the phone can load the app it can reach the bac
 run uvicorn with `--host 0.0.0.0`. Release builds fall back to the public production
 API; to point a development build elsewhere, set `EXPO_PUBLIC_API_URL` (see
 `mobile/src/api/config.ts`).
+
+Checks that must stay green (both CIs run them): `npx tsc --noEmit`, `npx expo lint`, and
+`node scripts/check-local-mode.mjs` from the repo root.
+
+**Screen sizes.** The reference device is a Galaxy Z Flip3 at **360dp wide** — narrower than
+most phones, and the constraint that new layouts actually have to clear. `mobile/src/theme/layout.ts`
+holds it: `useLayout()` returns `compact` (< 380dp) and `tight` (compact, or a system font
+scale above 1.15), and `chartWidth()` floors a chart canvas. Rules of thumb: no more than two
+controls across on `compact`, override `Input`'s horizontal padding inside tight rows, and any
+scroll container holding a text input needs `keyboardShouldPersistTaps="handled"`. AGENTS.md
+carries the arithmetic behind each.
 
 ### Try the device flow (no hardware needed)
 

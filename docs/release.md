@@ -28,6 +28,20 @@ Useful switches: `-SkipVerify` (re-run a build you already verified), `-NoPush`,
 `-NoPrebuild` (only safe when neither the version nor `app.json` changed),
 `-BuildDir` (defaults to `C:\rfb`).
 
+## Shipping a brand change
+
+Launcher, splash and favicon images are baked into `android/` at **prebuild** time, the same
+as `version` and `versionCode`. So if the mark changed:
+
+1. Run `python scripts/make-logo.py` **before** `release.ps1` — the Sync step mirrors
+   `assets/` into the build directory, but it copies whatever is on disk at that moment.
+2. Do not pass `-NoPrebuild`; without a prebuild the old mipmaps stay in the native project
+   and the build ships the previous icon.
+3. After the release, re-upload the store icon and feature graphic in Play Console. Listing
+   artwork is cached separately from the bundle and does not follow the app update.
+
+See [docs/branding.md](branding.md).
+
 ## Why `C:\rfb`
 
 Building inside the repo path fails with `ninja: error: manifest 'build.ninja'
