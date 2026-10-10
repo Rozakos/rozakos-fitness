@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import type { User } from "../api/types";
 import { accountCacheKey, clearAccountCache } from "../local/account-cache";
+import { setServingCached } from "./connectivity";
 import { storage } from "./storage";
 
 const TOKEN_KEY = "rozakos_token";
@@ -59,6 +60,7 @@ export const useAuth = create<AuthState>((set) => ({
       storage.delete(LOCAL_MODE_KEY),
     ]);
     if (account !== null) clearAccountCache(accountCacheKey(account));
+    setServingCached(false);
     set({ token: null, user: null, localMode: false });
   },
 }));

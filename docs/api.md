@@ -93,7 +93,7 @@ Only **one active workout** (`finished_at == null`) per user — starting a seco
 | Method & path | Notes |
 |---|---|
 | `POST /workouts` | `{routine_id?}` — copies the routine's exercises **including rep-range targets** onto the session |
-| `GET /workouts?limit=&offset=` | Finished workouts, newest first |
+| `GET /workouts?limit=&offset=` | Finished workouts, newest first. Each carries `routine_name`, `exercise_count`, `set_count` and `volume_kg` (warm-ups excluded) for history cards |
 | `GET /workouts/active` | Full active workout or `null` |
 | `GET /workouts/{id}` | |
 | `PATCH /workouts/{id}` | `{notes}` — explicit `null` clears, omitting the key leaves untouched |

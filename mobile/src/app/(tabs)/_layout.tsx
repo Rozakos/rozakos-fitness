@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import type { ColorValue } from "react-native";
 
+import { OfflineIndicator } from "@/components/offline-indicator";
 import { colors } from "@/theme/colors";
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -20,6 +21,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
+        headerRight: () => <OfflineIndicator />,
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarActiveTintColor: colors.accentBright,
         tabBarInactiveTintColor: colors.textFaint,

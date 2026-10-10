@@ -14,8 +14,10 @@ import { useAuth } from "@/store/auth";
 import { IntensityMode, WeightUnit, fromKg, useSettings } from "@/store/settings";
 import { colors, radius, spacing } from "@/theme/colors";
 import { chartWidth } from "@/theme/layout";
+import { useRefreshControl } from "@/hooks/use-refresh-control";
 
 export default function Profile() {
+  const refreshControl = useRefreshControl();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, localMode, signOut } = useAuth();
@@ -89,11 +91,16 @@ export default function Profile() {
         method: "POST",
         body: payload,
       });
-      completeLocalImport(user.id, payload.import_id, accountIdentity);
+      const changedSince = completeLocalImport(user.id, payload.import_id, accountIdentity);
       await queryClient.invalidateQueries();
       Alert.alert(
         result.already_imported ? "Local data already copied" : "Local data copied",
-        `${result.workouts} workouts, ${result.sets} sets, ${result.routines} routines, and ${result.bodyweight} bodyweight entries are in this account. The original on-phone data was kept.`,
+        `${result.workouts} workouts, ${result.sets} sets, ${result.routines} routines, and ${result.bodyweight} bodyweight entries are in this account. The original on-phone data was kept.` +
+          // An earlier attempt landed but its reply was lost; the server kept
+          // that first snapshot and ignored this retry's newer rows.
+          (result.already_imported && changedSince
+            ? "\n\nChanges made in local mode after the first copy attempt were not included."
+            : ""),
       );
     } catch (error) {
       Alert.alert(
@@ -107,6 +114,7 @@ export default function Profile() {
 
   return (
     <ScrollView
+      refreshControl={refreshControl}
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl }}
     >

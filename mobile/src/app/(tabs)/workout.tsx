@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 
 import {
   useActiveWorkout,
@@ -13,6 +13,7 @@ import {
 } from "@/api/hooks";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { RestTimer } from "@/components/rest-timer";
+import { SessionBar } from "@/components/session-bar";
 import { Button, EmptyState, Input, Loading } from "@/components/ui";
 import { WorkoutExerciseCard } from "@/components/workout-exercise-card";
 import { useWorkoutChannel } from "@/hooks/use-workout-channel";
@@ -99,25 +100,9 @@ export default function WorkoutScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* "handled" is essential here: with the default ("never") the tap that
-          dismisses the keyboard is swallowed by the ScrollView, so the first
-          press of a set's log button after typing reps/RPE does nothing. */}
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.topRow}>
-          <Text style={styles.title}>
-            {new Date(workout.started_at).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}{" "}
-            session
-          </Text>
-          {localMode ? null : (
-            <Text style={[styles.wsDot, { color: connected ? colors.success : colors.textFaint }]}>
-              ● {connected ? "live" : "offline"}
-            </Text>
-          )}
-        </View>
-
+      {/* Outside the ScrollView on purpose: the rest timer used to scroll away
+          with the list, out of sight by the third exercise. */}
+      <SessionBar workout={workout} deviceConnected={!localMode && connected}>
         {rest ? (
           <RestTimer
             endsAt={rest.endsAt}
@@ -126,7 +111,12 @@ export default function WorkoutScreen() {
             onAdjust={adjustRest}
           />
         ) : null}
+      </SessionBar>
 
+      {/* "handled" is essential here: with the default ("never") the tap that
+          dismisses the keyboard is swallowed by the ScrollView, so the first
+          press of a set's log button after typing reps/RPE does nothing. */}
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Input
           placeholder="Session notes (how did it feel?)"
           value={notes ?? workout.notes ?? ""}
@@ -153,6 +143,8 @@ export default function WorkoutScreen() {
             }
             onSwap={() => setPickerTarget(we.id)}
             onMove={(direction) => moveExercise(index, direction)}
+            isFirst={index === 0}
+            isLast={index === workout.exercises.length - 1}
           />
         ))}
 
@@ -184,12 +176,4 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
   content: { padding: spacing.md, paddingBottom: spacing.xl },
   emptyContainer: { flex: 1, backgroundColor: colors.bg, justifyContent: "center", padding: spacing.lg },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  title: { color: colors.text, fontSize: 18, fontWeight: "800" },
-  wsDot: { fontSize: 12, fontWeight: "700" },
 });

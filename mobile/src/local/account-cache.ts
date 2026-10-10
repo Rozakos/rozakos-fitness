@@ -13,6 +13,16 @@ interface AccountCache {
 }
 
 const MAX_ENTRIES = 200;
+/**
+ * Every GET lands here, and logging one set refetches several queries. Writing
+ * the whole file (up to 200 responses) synchronously on each one blocked the JS
+ * thread mid-workout, so the file is read once into memory and writes are
+ * coalesced into one after the burst settles.
+ */
+const WRITE_DELAY_MS = 1500;
+
+const memory = new Map<string, AccountCache>();
+const pendingWrites = new Map<string, ReturnType<typeof setTimeout>>();
 
 export function accountCacheKey(user: User): string {
   return `${user.id}-${user.created_at.replace(/[^0-9]/g, "")}`;
@@ -33,7 +43,7 @@ function emptyCache(): AccountCache {
   return { version: 1, entries: {} };
 }
 
-function readCache(accountKey: string): AccountCache {
+function readFromDisk(accountKey: string): AccountCache {
   try {
     const raw =
       Platform.OS === "web"
@@ -51,7 +61,19 @@ function readCache(accountKey: string): AccountCache {
   }
 }
 
-function writeCache(accountKey: string, cache: AccountCache): void {
+function readCache(accountKey: string): AccountCache {
+  let cache = memory.get(accountKey);
+  if (cache === undefined) {
+    cache = readFromDisk(accountKey);
+    memory.set(accountKey, cache);
+  }
+  return cache;
+}
+
+function writeToDisk(accountKey: string): void {
+  pendingWrites.delete(accountKey);
+  const cache = memory.get(accountKey);
+  if (cache === undefined) return;
   try {
     const json = JSON.stringify(cache);
     if (Platform.OS === "web") {
@@ -67,6 +89,14 @@ function writeCache(accountKey: string, cache: AccountCache): void {
   }
 }
 
+function scheduleWrite(accountKey: string): void {
+  if (pendingWrites.has(accountKey)) return;
+  pendingWrites.set(
+    accountKey,
+    setTimeout(() => writeToDisk(accountKey), WRITE_DELAY_MS),
+  );
+}
+
 export function cacheAccountResponse(accountKey: string, path: string, value: unknown): void {
   const cache = readCache(accountKey);
   cache.entries[path] = { savedAt: new Date().toISOString(), value };
@@ -77,7 +107,7 @@ export function cacheAccountResponse(accountKey: string, path: string, value: un
       .slice(0, keys.length - MAX_ENTRIES)
       .forEach((key) => delete cache.entries[key]);
   }
-  writeCache(accountKey, cache);
+  scheduleWrite(accountKey);
 }
 
 export function getCachedAccountResponse<T>(
@@ -89,6 +119,10 @@ export function getCachedAccountResponse<T>(
 }
 
 export function clearAccountCache(accountKey: string): void {
+  const pending = pendingWrites.get(accountKey);
+  if (pending !== undefined) clearTimeout(pending);
+  pendingWrites.delete(accountKey);
+  memory.delete(accountKey);
   try {
     if (Platform.OS === "web") {
       globalThis.localStorage?.removeItem(webKey(accountKey));

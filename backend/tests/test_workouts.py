@@ -80,7 +80,13 @@ def test_workout_lifecycle(client, headers):
     assert client.post(f"/workouts/{workout['id']}/finish", headers=headers).status_code == 409
 
     # history + exercise history (ghost values)
-    assert client.get("/workouts", headers=headers).json()[0]["id"] == workout["id"]
+    summary = client.get("/workouts", headers=headers).json()[0]
+    assert summary["id"] == workout["id"]
+    # history-card totals: the warm-up is excluded, the edited set counts at 87.5
+    assert summary["routine_name"] == routine["name"]
+    assert summary["exercise_count"] == 1
+    assert summary["set_count"] == 2
+    assert summary["volume_kg"] == 5 * 80 + 5 * 87.5
     bench = we["exercise"]["id"]
     history = client.get(f"/exercises/{bench}/history", headers=headers).json()
     assert len(history) == 1

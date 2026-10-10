@@ -161,13 +161,19 @@ function serializeWorkout(db: LocalDB, w: StoredWorkout): Workout {
   };
 }
 
-function summarize(w: StoredWorkout): WorkoutSummary {
+// mirrors summarize_workout in backend/app/routers/workouts.py
+function summarize(db: LocalDB, w: StoredWorkout): WorkoutSummary {
+  const working = w.exercises.flatMap((we) => we.sets.filter((s) => !s.is_warmup));
   return {
     id: w.id,
     routine_id: w.routine_id,
     started_at: w.started_at,
     finished_at: w.finished_at,
     notes: w.notes,
+    routine_name: db.routines.find((r) => r.id === w.routine_id)?.name ?? null,
+    exercise_count: w.exercises.filter((we) => we.sets.length > 0).length,
+    set_count: working.length,
+    volume_kg: Math.round(working.reduce((sum, s) => sum + s.reps * s.weight_kg, 0) * 100) / 100,
   };
 }
 
@@ -479,7 +485,7 @@ export async function localApi<T>(
           .filter((w) => w.finished_at !== null)
           .sort((a, b) => b.started_at.localeCompare(a.started_at))
           .slice(offset, offset + limit)
-          .map(summarize);
+          .map((w) => summarize(db, w));
       }
       if (seg.length === 1 && method === "POST") {
         if (activeWorkout(db) !== null) {

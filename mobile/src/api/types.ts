@@ -91,6 +91,11 @@ export interface WorkoutSummary {
   started_at: string;
   finished_at: string | null;
   notes: string | null;
+  routine_name: string | null;
+  /** Totals for the history card; warm-ups excluded. */
+  exercise_count: number;
+  set_count: number;
+  volume_kg: number;
 }
 
 export interface ExerciseHistoryEntry {

@@ -268,6 +268,36 @@ export function useWeeklyVolume(weeks = 12) {
   });
 }
 
+function mondayOf(date: Date): string {
+  const d = new Date(date);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * The last `weeks` weeks, oldest first, ending with the current week, with the
+ * weeks the API omits (no training) filled in as zero. `/stats/volume` only
+ * lists weeks that have sets, so its last entry is not necessarily this week.
+ * The clock is read here in the query function, never during render.
+ */
+export function useRecentWeeks(weeks = 8) {
+  return useQuery<{ week_start: string; total_volume_kg: number }[]>({
+    queryKey: ["volume", weeks, "dense"],
+    queryFn: async () => {
+      const data = await api<WeekVolume[]>(`/stats/volume?weeks=${weeks}`);
+      const byWeek = new Map(data.map((w) => [w.week_start, w.total_volume_kg]));
+      const now = new Date();
+      return Array.from({ length: weeks }, (_, i) => {
+        const day = new Date(now);
+        day.setDate(day.getDate() - (weeks - 1 - i) * 7);
+        const week_start = mondayOf(day);
+        return { week_start, total_volume_kg: byWeek.get(week_start) ?? 0 };
+      });
+    },
+  });
+}
+
 export function useExerciseTrend(exerciseId: number | undefined) {
   return useQuery<ExerciseTrendPoint[]>({
     queryKey: ["trend", exerciseId],

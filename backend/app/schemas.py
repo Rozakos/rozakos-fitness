@@ -245,6 +245,11 @@ class WorkoutSummary(ORMModel):
     started_at: datetime
     finished_at: datetime | None
     notes: str | None
+    # History-card totals. Warm-ups are excluded, as in every other stat.
+    routine_name: str | None = None
+    exercise_count: int = 0
+    set_count: int = 0
+    volume_kg: float = 0
 
 
 # --- Device ---

@@ -9,12 +9,14 @@ import { Card, SectionTitle } from "@/components/ui";
 import { formatPerformedOrder, fromKg, rpeToDisplay, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
 import { chartWidth } from "@/theme/layout";
+import { useRefreshControl } from "@/hooks/use-refresh-control";
 
 function shortDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 export default function ExerciseDetail() {
+  const refreshControl = useRefreshControl();
   const { id } = useLocalSearchParams<{ id: string }>();
   const exerciseId = Number(id);
   const { width } = useWindowDimensions();
@@ -29,6 +31,7 @@ export default function ExerciseDetail() {
 
   return (
     <ScrollView
+      refreshControl={refreshControl}
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl }}
       // the video and setup editors live here, so the first tap on Save must land

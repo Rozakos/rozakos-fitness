@@ -265,14 +265,21 @@ export function prepareLocalImport(
   };
 }
 
+/**
+ * Returns true when the phone's data changed after this import id was minted.
+ * That only matters when the server answers `already_imported`: the first
+ * attempt landed but its response was lost, so the retry's newer rows were
+ * ignored and the user has to be told.
+ */
 export function completeLocalImport(
   userId: number,
   importId: string,
   accountIdentity = String(userId),
-): void {
+): boolean {
   const db = loadDb();
   const marker = db.accountImports[accountIdentity];
-  if (marker?.importId !== importId) return;
+  if (marker?.importId !== importId) return false;
   marker.completed = true;
   persistMetadata(db);
+  return db.revision !== marker.revision;
 }

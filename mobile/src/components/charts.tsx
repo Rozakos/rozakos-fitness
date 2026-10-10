@@ -172,6 +172,32 @@ export function LabeledBars({
   );
 }
 
+/**
+ * Inline sparkline-sized bars for a dashboard card: no axes, no labels, the
+ * last bar (the current period) in the accent so it reads as "now".
+ */
+export function MiniBars({ values, height = 36 }: { values: number[]; height?: number }) {
+  const max = Math.max(...values, 1);
+  return (
+    <View style={[styles.miniRow, { height }]}>
+      {values.map((v, i) => (
+        <View
+          key={i}
+          style={[
+            styles.miniBar,
+            {
+              // an empty week still gets a sliver, so the gap reads as "zero", not "missing"
+              height: Math.max(2, (v / max) * height),
+              backgroundColor: i === values.length - 1 ? colors.chartCrimson : colors.chartTeal,
+              opacity: i === values.length - 1 ? 1 : 0.55,
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   placeholder: { color: colors.textMuted, fontSize: 13, paddingVertical: spacing.md },
   lastLabel: { position: "absolute", right: 0 },
@@ -182,6 +208,8 @@ const styles = StyleSheet.create({
   // 84dp on a roomy phone, giving way to the bar track on a narrow one
   hLabel: { color: colors.textMuted, fontSize: 12, flexBasis: 84, flexGrow: 0, flexShrink: 1 },
   hTrack: { flex: 1, minWidth: 40 },
+  miniRow: { flexDirection: "row", alignItems: "flex-end", gap: 3 },
+  miniBar: { width: 8, borderRadius: 2 },
   hValue: {
     color: colors.text,
     fontSize: 12,

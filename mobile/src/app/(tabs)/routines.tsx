@@ -1,8 +1,10 @@
 import { useRouter } from "expo-router";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useActiveWorkout, useRoutines, useStartWorkout } from "@/api/hooks";
 import { Button, Card, EmptyState, Loading } from "@/components/ui";
+import { useRefreshControl } from "@/hooks/use-refresh-control";
 import { colors, spacing } from "@/theme/colors";
 
 export default function Routines() {
@@ -10,13 +12,28 @@ export default function Routines() {
   const { data: routines, isLoading } = useRoutines();
   const { data: active } = useActiveWorkout();
   const startWorkout = useStartWorkout();
+  const refreshControl = useRefreshControl();
+  // only the routine actually being started shows a spinner
+  const startingId = startWorkout.isPending ? startWorkout.variables?.routine_id : undefined;
 
   if (isLoading) return <Loading />;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, padding: spacing.md }}>
+      {/* One banner instead of "Workout in progress" stamped on every card */}
+      {active ? (
+        <Pressable
+          onPress={() => router.navigate("/workout")}
+          style={({ pressed }) => [styles.activeBanner, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="barbell" size={18} color={colors.text} />
+          <Text style={styles.activeText}>Workout in progress — continue</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.text} />
+        </Pressable>
+      ) : null}
       <Button title="+ New routine" onPress={() => router.navigate("/routine/new")} />
       <FlatList
+        refreshControl={refreshControl}
         data={routines ?? []}
         keyExtractor={(r) => String(r.id)}
         contentContainerStyle={{ paddingVertical: spacing.md }}
@@ -35,15 +52,15 @@ export default function Routines() {
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Button
-                  title={active ? "Workout in progress" : "Start"}
+                  title="Start"
                   onPress={() =>
                     startWorkout.mutate(
                       { routine_id: item.id },
                       { onSuccess: () => router.navigate("/workout") },
                     )
                   }
-                  disabled={!!active}
-                  loading={startWorkout.isPending}
+                  disabled={!!active || startWorkout.isPending}
+                  loading={startingId === item.id}
                 />
               </View>
               <Button
@@ -63,4 +80,15 @@ const styles = StyleSheet.create({
   name: { color: colors.text, fontSize: 17, fontWeight: "700" },
   muted: { color: colors.textMuted, fontSize: 12, marginTop: 2, marginBottom: spacing.sm },
   row: { flexDirection: "row", gap: spacing.sm },
+  activeBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.accent,
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    minHeight: 48,
+    marginBottom: spacing.sm,
+  },
+  activeText: { color: colors.text, fontWeight: "700", fontSize: 15, flex: 1 },
 });

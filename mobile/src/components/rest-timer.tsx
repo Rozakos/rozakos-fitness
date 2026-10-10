@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { buzz } from "@/hooks/haptics";
 import { colors, spacing } from "@/theme/colors";
 
 function BarButton({ label, onPress }: { label: string; onPress: () => void }) {
@@ -33,7 +34,11 @@ export function RestTimer({
     const interval = setInterval(() => {
       const left = endsAt - Date.now();
       setRemaining(Math.max(0, left));
-      if (left <= 0) onDone();
+      if (left <= 0) {
+        // only a timer that ran out buzzes — Skip calls onDone directly
+        buzz("rest-over");
+        onDone();
+      }
     }, 250);
     return () => clearInterval(interval);
   }, [endsAt, onDone]);

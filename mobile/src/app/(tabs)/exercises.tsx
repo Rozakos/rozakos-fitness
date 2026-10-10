@@ -5,8 +5,10 @@ import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
 import { useExercises } from "@/api/hooks";
 import { Input, Loading } from "@/components/ui";
 import { colors, radius, spacing } from "@/theme/colors";
+import { useRefreshControl } from "@/hooks/use-refresh-control";
 
 export default function Exercises() {
+  const refreshControl = useRefreshControl();
   const router = useRouter();
   const [search, setSearch] = useState("");
   const { data: exercises, isLoading } = useExercises(search || undefined);
@@ -25,6 +27,7 @@ export default function Exercises() {
     <View style={{ flex: 1, backgroundColor: colors.bg, padding: spacing.md }}>
       <Input placeholder="Search exercises..." value={search} onChangeText={setSearch} />
       <SectionList
+      refreshControl={refreshControl}
         sections={sections}
         keyExtractor={(e) => String(e.id)}
         stickySectionHeadersEnabled={false}

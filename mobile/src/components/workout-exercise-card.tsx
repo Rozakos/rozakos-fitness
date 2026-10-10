@@ -10,10 +10,12 @@ import {
   useRemoveWorkoutExercise,
 } from "@/api/hooks";
 import type { WorkoutExercise, WorkoutSet } from "@/api/types";
+import { ActionMenu, type MenuAction } from "@/components/action-menu";
 import { ExerciseInfoSheet } from "@/components/exercise-info-sheet";
 import { YOUTUBE_RED, openVideo } from "@/components/exercise-video";
 import { PlateCalculator } from "@/components/plate-calculator";
 import { Badge, Card, Input } from "@/components/ui";
+import { buzz } from "@/hooks/haptics";
 import { displayToRpe, fromKg, rpeToDisplay, toKg, useSettings } from "@/store/settings";
 import { colors, spacing } from "@/theme/colors";
 
@@ -68,6 +70,8 @@ export function WorkoutExerciseCard({
   onSetLogged,
   onSwap,
   onMove,
+  isFirst,
+  isLast,
   liveRepCount,
 }: {
   workoutId: number;
@@ -75,6 +79,8 @@ export function WorkoutExerciseCard({
   onSetLogged: (restSeconds: number) => void;
   onSwap: () => void;
   onMove: (direction: -1 | 1) => void;
+  isFirst: boolean;
+  isLast: boolean;
   liveRepCount?: number;
 }) {
   const { data: history } = useExerciseHistory(we.exercise.id, 1);
@@ -100,6 +106,7 @@ export function WorkoutExerciseCard({
   const [warmup, setWarmup] = useState(false);
   const [platesOpen, setPlatesOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [addedSign, setAddedSign] = useState<1 | -1>(1);
 
   // For bodyweight movements the weight box means *added* load, not total: blank
@@ -158,6 +165,7 @@ export function WorkoutExerciseCard({
       { workoutId, weId: we.id, weight_kg: totalKg, reps: r, rpe: rpeValue, is_warmup: warmup },
       {
         onSuccess: () => {
+          buzz("set-logged");
           setWeight("");
           setReps("");
           setIntensity("");
@@ -169,6 +177,31 @@ export function WorkoutExerciseCard({
       },
     );
   };
+
+  const remove = () => removeExercise.mutate({ workoutId, weId: we.id });
+  const confirmRemove = () => {
+    // removing the exercise deletes every set logged under it — a one-tap
+    // trash icon next to "swap" lost a whole lift's sets to a single misclick
+    if (we.sets.length === 0) {
+      remove();
+      return;
+    }
+    Alert.alert(
+      `Remove ${we.exercise.name}?`,
+      `Its ${we.sets.length} logged set${we.sets.length === 1 ? "" : "s"} will be deleted.`,
+      [
+        { text: "Keep", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: remove },
+      ],
+    );
+  };
+
+  const menuActions: MenuAction[] = [
+    ...(isFirst ? [] : [{ label: "Move up", icon: "arrow-up" as const, onPress: () => onMove(-1) }]),
+    ...(isLast ? [] : [{ label: "Move down", icon: "arrow-down" as const, onPress: () => onMove(1) }]),
+    { label: "Swap exercise", icon: "swap-horizontal", onPress: onSwap },
+    { label: "Remove exercise", icon: "trash-outline", onPress: confirmRemove, destructive: true },
+  ];
 
   return (
     <Card>
@@ -193,9 +226,16 @@ export function WorkoutExerciseCard({
         {we.superset_group != null ? (
           <Badge label={`SS${we.superset_group}`} color={colors.accent} />
         ) : null}
+        {/* Two direct actions and an overflow. Six 18px icons used to sit here,
+            each far below the 48dp touch target, with delete beside swap. */}
         <View style={styles.headerActions}>
-          <Pressable onPress={() => setInfoOpen(true)} hitSlop={8}>
-            <Ionicons name="information-circle-outline" size={19} color={colors.accentBright} />
+          <Pressable
+            onPress={() => setInfoOpen(true)}
+            hitSlop={6}
+            style={styles.headerButton}
+            accessibilityLabel="Exercise info"
+          >
+            <Ionicons name="information-circle-outline" size={22} color={colors.accentBright} />
           </Pressable>
           {/* with a link saved this plays it straight away; without one it opens
               the sheet, which is where a link gets pasted */}
@@ -203,25 +243,23 @@ export function WorkoutExerciseCard({
             onPress={() =>
               we.exercise.video_url ? openVideo(we.exercise.video_url) : setInfoOpen(true)
             }
-            hitSlop={8}
+            hitSlop={6}
+            style={styles.headerButton}
+            accessibilityLabel="Form video"
           >
             <Ionicons
               name="logo-youtube"
-              size={18}
+              size={22}
               color={we.exercise.video_url ? YOUTUBE_RED : colors.textFaint}
             />
           </Pressable>
-          <Pressable onPress={() => onMove(-1)} hitSlop={8}>
-            <Ionicons name="chevron-up" size={18} color={colors.textMuted} />
-          </Pressable>
-          <Pressable onPress={() => onMove(1)} hitSlop={8}>
-            <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
-          </Pressable>
-          <Pressable onPress={onSwap} hitSlop={8}>
-            <Ionicons name="swap-horizontal" size={18} color={colors.textMuted} />
-          </Pressable>
-          <Pressable onPress={() => removeExercise.mutate({ workoutId, weId: we.id })} hitSlop={8}>
-            <Ionicons name="trash-outline" size={18} color={colors.textFaint} />
+          <Pressable
+            onPress={() => setMenuOpen(true)}
+            hitSlop={6}
+            style={styles.headerButton}
+            accessibilityLabel="More actions"
+          >
+            <Ionicons name="ellipsis-horizontal" size={22} color={colors.textMuted} />
           </Pressable>
         </View>
       </View>
@@ -246,8 +284,54 @@ export function WorkoutExerciseCard({
         <SetRow key={set.id} set={set} workoutId={workoutId} weId={we.id} />
       ))}
 
+      {/* Column labels, built from the same widths and flex values as the row
+          below. The placeholders used to be the only labels, and they turn
+          into last session's numbers as soon as there is a history. */}
+      <View
+        style={[styles.inputRow, styles.labelRow]}
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Text
+          style={[styles.columnLabel, { width: 32 }]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={1}
+        >
+          WARM
+        </Text>
+        {isBodyweight ? <View style={{ width: 28 }} /> : null}
+        <Text
+          style={[styles.columnLabel, styles.labelFlex]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.2}
+        >
+          {isBodyweight ? `+${unit.toUpperCase()}` : unit.toUpperCase()}
+        </Text>
+        <View style={{ width: 20 }} />
+        <Text
+          style={[styles.columnLabel, styles.labelFlex]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.2}
+        >
+          REPS
+        </Text>
+        <Text
+          style={[styles.columnLabel, styles.labelFlex, { flex: 0.7 }]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.2}
+        >
+          {intensityMode.toUpperCase()}
+        </Text>
+        <View style={{ width: 40 }} />
+      </View>
       <View style={styles.inputRow}>
-        <Pressable onPress={() => setWarmup(!warmup)} style={styles.warmupToggle} hitSlop={4}>
+        <Pressable
+          onPress={() => setWarmup(!warmup)}
+          style={[styles.warmupToggle, warmup && styles.warmupOn]}
+          hitSlop={4}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: warmup }}
+          accessibilityLabel="Warm-up set"
+        >
           <Text style={{ color: warmup ? colors.success : colors.textFaint, fontWeight: "800" }}>
             W
           </Text>
@@ -307,6 +391,7 @@ export function WorkoutExerciseCard({
         />
         <Pressable
           onPress={submit}
+          accessibilityLabel="Log set"
           disabled={logSet.isPending || !canLog}
           style={[styles.logButton, (logSet.isPending || !canLog) && { opacity: 0.5 }]}
         >
@@ -327,6 +412,13 @@ export function WorkoutExerciseCard({
         exercise={we.exercise}
         visible={infoOpen}
         onClose={() => setInfoOpen(false)}
+      />
+
+      <ActionMenu
+        visible={menuOpen}
+        title={we.exercise.name}
+        actions={menuActions}
+        onClose={() => setMenuOpen(false)}
       />
 
       <PlateCalculator
@@ -353,11 +445,12 @@ const styles = StyleSheet.create({
   headerTitle: { flexGrow: 1, flexShrink: 1, minWidth: 150 },
   headerActions: {
     flexDirection: "row",
-    gap: spacing.xs,
     alignItems: "center",
     marginLeft: "auto",
-    paddingLeft: spacing.sm,
+    paddingLeft: spacing.xs,
   },
+  // 36dp boxes plus 6dp of hit slop on each side reach the 48dp target
+  headerButton: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   name: { color: colors.text, fontSize: 16, fontWeight: "700" },
   muted: { color: colors.textMuted, fontSize: 12 },
   setupLine: { color: colors.success, fontSize: 12, marginTop: 2 },
@@ -399,6 +492,16 @@ const styles = StyleSheet.create({
     rowGap: spacing.sm,
     marginTop: spacing.sm,
   },
+  labelRow: { marginTop: spacing.sm, marginBottom: -spacing.xs },
+  columnLabel: {
+    color: colors.textFaint,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+  labelFlex: { flex: 1, minWidth: 44 },
+  warmupOn: { borderWidth: 1, borderColor: colors.success },
   warmupToggle: {
     width: 32,
     height: 36,

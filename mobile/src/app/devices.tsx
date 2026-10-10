@@ -5,8 +5,10 @@ import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useCreateDevice, useDevices, useRevokeDevice } from "@/api/hooks";
 import { Button, Card, Input, SectionTitle } from "@/components/ui";
 import { colors, radius, spacing } from "@/theme/colors";
+import { useRefreshControl } from "@/hooks/use-refresh-control";
 
 export default function Devices() {
+  const refreshControl = useRefreshControl();
   const { data: devices } = useDevices();
   const createDevice = useCreateDevice();
   const revokeDevice = useRevokeDevice();
@@ -15,6 +17,7 @@ export default function Devices() {
 
   return (
     <ScrollView
+      refreshControl={refreshControl}
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.xl }}
       // the device-name box lives here: without "handled" the first tap on

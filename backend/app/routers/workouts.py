@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..database import get_db
 from ..live import manager
@@ -96,13 +96,37 @@ def list_workouts(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return (
+    workouts = (
         db.query(Workout)
+        .options(selectinload(Workout.exercises).selectinload(WorkoutExercise.sets))
         .filter(Workout.user_id == user.id, Workout.finished_at.isnot(None))
         .order_by(Workout.started_at.desc())
         .offset(offset)
         .limit(limit)
         .all()
+    )
+    routine_ids = {w.routine_id for w in workouts if w.routine_id is not None}
+    routine_names = {
+        routine.id: routine.name
+        for routine in db.query(Routine).filter(
+            Routine.id.in_(routine_ids), Routine.user_id == user.id
+        )
+    } if routine_ids else {}
+    return [summarize_workout(w, routine_names.get(w.routine_id)) for w in workouts]
+
+
+def summarize_workout(workout: Workout, routine_name: str | None) -> WorkoutSummary:
+    working = [s for we in workout.exercises for s in we.sets if not s.is_warmup]
+    return WorkoutSummary(
+        id=workout.id,
+        routine_id=workout.routine_id,
+        started_at=workout.started_at,
+        finished_at=workout.finished_at,
+        notes=workout.notes,
+        routine_name=routine_name,
+        exercise_count=sum(1 for we in workout.exercises if we.sets),
+        set_count=len(working),
+        volume_kg=round(sum(s.reps * s.weight_kg for s in working), 2),
     )
 
 

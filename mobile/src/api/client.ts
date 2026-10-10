@@ -5,6 +5,7 @@ import {
   getCachedAccountResponse,
 } from "../local/account-cache";
 import { useAuth } from "../store/auth";
+import { setServingCached } from "../store/connectivity";
 import { API_URL } from "./config";
 import { ApiError } from "./error";
 
@@ -17,6 +18,12 @@ export async function api<T>(
   const { token, user, localMode } = useAuth.getState();
   if (localMode) return localApi<T>(path, options);
   const method = options.method ?? "GET";
+  // Account mode keeps the last successful GET on this phone. Mutations are
+  // never guessed or silently queued yet, so callers still see write errors.
+  const fromCache = (): { found: false } | { found: true; value: T } =>
+    method === "GET" && user !== null
+      ? getCachedAccountResponse<T>(accountCacheKey(user), path)
+      : { found: false };
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
@@ -28,13 +35,22 @@ export async function api<T>(
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
   } catch (error) {
-    // Account mode keeps the last successful GET on this phone. Mutations are
-    // never guessed or silently queued yet, so callers still see write errors.
-    if (method === "GET" && user !== null) {
-      const cached = getCachedAccountResponse<T>(accountCacheKey(user), path);
-      if (cached.found) return cached.value;
+    const cached = fromCache();
+    if (cached.found) {
+      setServingCached(true);
+      return cached.value;
     }
     throw error;
+  }
+  // The API sits behind a Cloudflare Tunnel: with the origin down, Cloudflare
+  // still answers (502/530), so a 5xx is the common "server unreachable" shape
+  // and has to fall back exactly like a network error.
+  if (res.status >= 500) {
+    const cached = fromCache();
+    if (cached.found) {
+      setServingCached(true);
+      return cached.value;
+    }
   }
   if (res.status === 401 && token) {
     // token expired/revoked — drop the session so the auth gate kicks in
@@ -50,6 +66,7 @@ export async function api<T>(
     }
     throw new ApiError(res.status, detail);
   }
+  setServingCached(false);
   if (res.status === 204) return undefined as T;
   const data = (await res.json()) as T;
   if (method === "GET" && user !== null) cacheAccountResponse(accountCacheKey(user), path, data);

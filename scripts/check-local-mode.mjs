@@ -179,6 +179,12 @@ async function run(
   await localApi(`/workouts/${second_workout.id}/finish`, { method: "POST", body: {} });
   const skipped = await localApi(`/exercises/${bench.id}/history`);
   check("an exercise with no sets is not counted", skipped[0].position === 1 && skipped[0].total_exercises === 1, skipped[0]);
+  const [latest] = await localApi("/workouts?limit=1");
+  check(
+    "history summaries carry working-set totals",
+    latest.exercise_count === 1 && latest.set_count === 1 && latest.volume_kg === 520 && latest.routine_name === null,
+    latest,
+  );
 
   console.log("\nlocal-to-account import snapshot");
   const firstImport = prepareLocalImport(42);

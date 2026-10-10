@@ -271,6 +271,20 @@ The manual recipe below still describes what the script automates.
   preserves timestamps and relationships, gives existing cloud preferences/bodyweight priority,
   rejects active-workout conflicts before writing, and stores the import result under a stable
   idempotency key so retries cannot duplicate history. The original local database remains intact.
+- [x] UI + robustness pass (2026-10-10): the workout screen has a pinned `SessionBar`
+  (running clock, working sets/volume, device-live badge, rest timer — which used to scroll
+  away); each exercise card has info + video + a "⋯" `ActionMenu` (48dp rows) in place of six
+  18px icons, and removing an exercise with logged sets asks first; set-entry columns are
+  labelled; `expo-haptics` buzzes on set logged / rest over (**new native module — needs a
+  prebuild**). Home's "This week" uses `useRecentWeeks` (dense weeks ending at the current
+  one — `/stats/volume` omits empty weeks, so its last entry was not necessarily this week)
+  with an 8-week `MiniBars`; `GET /workouts` summaries now carry `routine_name`,
+  `exercise_count`, `set_count`, `volume_kg` (mirrored in `local/api.ts`). Pull-to-refresh on
+  list screens (`useRefreshControl`). Offline: the saved-response fallback now also covers 5xx
+  (Cloudflare answers 502/530 when the origin is down), a "Saved data" header badge shows
+  while it is in use, and `account-cache.ts` keeps the cache in memory with one coalesced
+  disk write instead of a full file rewrite per GET. Typechecked, linted, web-exported and
+  local-mode checked only — **not yet seen on the phone**.
 - [ ] **v1.6/v1.7 are installed but not runtime-verified.** No test runner exists in `mobile/`, so
   the bodyweight math, the ± toggle, the rest timer's new `durationMs` first frame, the routine
   editor's render-time seeding, and now the info sheet / video buttons have only been typechecked

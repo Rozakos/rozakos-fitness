@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 
+import { OfflineIndicator } from "@/components/offline-indicator";
 import { Loading } from "@/components/ui";
 import { useAuth } from "@/store/auth";
 import { useSettings } from "@/store/settings";
@@ -47,6 +48,7 @@ function AuthGate() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
+        headerRight: () => <OfflineIndicator />,
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
