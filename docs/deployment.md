@@ -9,7 +9,7 @@ The production API runs in its own container on the office Proxmox cluster (veri
   `ha-manager status | grep ct:216` shows the current node. Shell: `pct enter 216` on that node.
 - history: VM 100 at home until 2026-11-08, briefly CT 215 `web`, then CT 216 the same day.
   The VM 100 and CT 215 copies are stopped and disabled, not deleted.
-- deployed commit: `090dcc9` (same as `main` on 2026-11-10)
+- deployed commit: `fb8dad2` (2026-11-10; see "Deploy record" at the end)
 - checkout: `/opt/rozakos-fitness` (root-owned)
 - service user: `rozakos-fitness` (no login shell)
 - SQLite database: `/var/lib/rozakos-fitness/fitness.db`
@@ -17,7 +17,9 @@ The production API runs in its own container on the office Proxmox cluster (veri
 - listener: `127.0.0.1:8002`, one Uvicorn worker
 - public hostname: `https://fitness-api.rozakos.eu` through the container's own Cloudflare Tunnel
   `fitness-office` (`171a8148-2e3e-467b-933d-468e8688ed23`, config `/etc/cloudflared/config.yml`)
-- backups: `/var/backups/rozakos-fitness/`, daily SQLite online backup, 30 retained
+- backups: `/var/backups/rozakos-fitness/`, daily SQLite online backup, 30 retained, plus an
+  age-encrypted copy (7 retained) that the home VM pulls off-site every day
+- monitoring: `/health`, and an independent monitor on the home VM; see [operations](operations.md)
 
 The database enables WAL, foreign keys, a five-second busy timeout, and normal synchronous
 mode on every SQLite connection. The systemd unit trusts forwarded client addresses only
@@ -111,3 +113,25 @@ The initial API key was placed directly in `/etc/rozakos-fitness.env`, owned by
 if it is ever disclosed. Start DMARC at `v=DMARC1; p=none;` on
 `_dmarc.fitness.rozakos.eu`, monitor it, and tighten the policy after legitimate delivery is
 confirmed.
+
+## Deploy record
+
+### 2026-11-10: `090dcc9` to `fb8dad2` (CT 216)
+
+- Installed `git`, `unattended-upgrades` and `age` in the container.
+- On-demand backup `fitness-20261110T120357Z.db`, environment copy
+  `/etc/rozakos-fitness.env.bak-20261110T120357Z`, then `git pull --ff-only` and
+  `deploy/install-server.sh`.
+- Added `ROZAKOS_OPS_TOKEN` to the environment file (generated in place, never displayed) and
+  `/etc/rozakos-fitness-backup-recipients.txt` with the home age public key. Nothing else in the
+  environment file changed, so issued tokens stayed valid.
+- Checked: service active with no errors in the journal; `/health`, `/`, `/privacy`,
+  `/account-deletion` and `/reset-password` return 200; `/ops/*` without the key returns 404;
+  installed packages equal `backend/constraints.txt`; first `.db.age` written.
+- Home VM: agent and user timers installed; first off-site snapshot `e674829b` decrypted to a
+  SQLite database; `ops-agent.py check` healthy.
+- Not checked: the alert email itself was not test-sent, and the app changes in this release
+  (set-delete confirmation, time zone parameter, Expo patch updates) have not been built or
+  tried on a phone. The server accepts old apps that send no `tz` (it defaults to UTC).
+- Rollback: `git checkout 090dcc9` in `/opt/rozakos-fitness` and run the installer. No schema
+  change was made.
