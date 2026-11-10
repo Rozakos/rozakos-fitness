@@ -1,0 +1,9 @@
+[Unit]
+Description=Independent Rozakos Fitness health and backup monitor
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/services/rozakos-fitness-ops
+ExecStart=/usr/bin/python3 %h/services/rozakos-fitness-ops/ops-agent.py monitor
+TimeoutStartSec=90
+UMask=0077

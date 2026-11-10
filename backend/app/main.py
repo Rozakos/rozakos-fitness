@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
@@ -10,7 +10,7 @@ from . import live
 from .config import get_settings
 from .database import Base, SessionLocal, engine
 from .rate_limit import auth_rate_limiter
-from .routers import auth, bodyweight, devices, exercises, routines, stats, sync, workouts
+from .routers import auth, bodyweight, devices, exercises, ops, routines, stats, sync, workouts
 from .seed import seed_exercises
 
 settings = get_settings()
@@ -76,11 +76,24 @@ app.include_router(bodyweight.router)
 app.include_router(devices.router)
 app.include_router(sync.router)
 app.include_router(live.router)
+app.include_router(ops.router)
 
 
 @app.get("/")
 def root():
     return {"app": settings.app_name, "docs": "/docs"}
+
+
+@app.get("/health", include_in_schema=False)
+def health(response: Response):
+    """Liveness for the external monitor: the process answers and SQLite reads."""
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception:
+        response.status_code = 503
+        return {"status": "unavailable", "database": False}
+    return {"status": "ok", "database": True}
 
 
 @app.get("/account-deletion", response_class=HTMLResponse, include_in_schema=False)

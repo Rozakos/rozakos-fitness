@@ -50,9 +50,8 @@ environment file on later runs.
 
 ## Update
 
-CT 216 has the git checkout (`.git` is present) but **the `git` package is not installed in the
-container**, so install it once before the first update there (`apt-get install -y git`).
-Take an on-demand backup first:
+`git` and `unattended-upgrades` were installed in CT 216 on 2026-11-10 (the container had
+neither, and was not applying security updates). Take an on-demand backup first:
 
 ```bash
 systemctl start rozakos-fitness-backup.service
@@ -60,6 +59,10 @@ cd /opt/rozakos-fitness
 git pull --ff-only origin main
 bash deploy/install-server.sh
 ```
+
+Python packages install against `backend/constraints.txt`, the exact versions production
+runs, so a deploy or rollback gets the same set every time. To move them, install without
+`-c` in a scratch virtualenv, run the tests, and commit a new freeze.
 
 Do not replace `/etc/rozakos-fitness.env` during a deploy: changing the secret invalidates
 every issued token. Do not put `fitness.db` in the checkout.
@@ -70,10 +73,12 @@ every issued token. Do not put `fitness.db` in the checkout.
 systemctl status rozakos-fitness.service
 journalctl -u rozakos-fitness.service -n 100 --no-pager
 systemctl list-timers rozakos-fitness-backup.timer
-curl --fail https://fitness-api.rozakos.eu/
+curl --fail https://fitness-api.rozakos.eu/health
 curl --fail https://fitness-api.rozakos.eu/privacy
 curl --fail https://fitness-api.rozakos.eu/account-deletion
 ```
+
+Monitoring, the encrypted off-site copy and how to restore from it: [operations](operations.md).
 
 To restore, stop the API, copy a selected backup over the database as the service user,
 remove any stale `fitness.db-wal` and `fitness.db-shm` files, then start the API. Preserve the

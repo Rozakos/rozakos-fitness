@@ -16,7 +16,7 @@ hand-edited (see [docs/branding.md](docs/branding.md)). *Build your ideas* — t
 | API server | Python, FastAPI, SQLAlchemy, SQLite | `backend/` |
 | Mobile app | React Native, Expo, TypeScript | `mobile/` |
 | Device examples | Python (requests + websockets) | `examples/` |
-| Docs | [API reference](docs/api.md) · [Device integration guide](docs/device-integration.md) · [Deployment](docs/deployment.md) · [Google Play](docs/play-store.md) · [Releasing](docs/release.md) · [Branding](docs/branding.md) | `docs/` |
+| Docs | [API reference](docs/api.md) · [Device integration guide](docs/device-integration.md) · [Deployment](docs/deployment.md) · [Operations](docs/operations.md) · [Google Play](docs/play-store.md) · [Releasing](docs/release.md) · [Branding](docs/branding.md) | `docs/` |
 
 ### Features (v1 — the Tracked strength-training core)
 

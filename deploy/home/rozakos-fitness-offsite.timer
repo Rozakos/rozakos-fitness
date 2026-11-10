@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily home-site encrypted Fitness backup
+
+[Timer]
+OnCalendar=*-*-* 05:30:00 Europe/Athens
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

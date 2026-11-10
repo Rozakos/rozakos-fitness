@@ -142,3 +142,78 @@ def test_bodyweight_upsert(client, headers):
     entries = client.get("/bodyweight", headers=headers).json()
     assert len(entries) == 1
     assert entries[0]["weight_kg"] == 82.0
+
+
+def test_volume_weeks_follow_the_callers_time_zone(client, headers):
+    """A workout at 22:30 UTC on a Sunday is already Monday in Athens."""
+    from datetime import datetime, timezone
+
+    from app.database import SessionLocal
+    from app.models import Workout
+
+    bench = first_exercise_id(client, headers)
+    workout = client.post("/workouts", json={}, headers=headers).json()
+    we = client.post(
+        f"/workouts/{workout['id']}/exercises", json={"exercise_id": bench}, headers=headers
+    ).json()
+    client.post(
+        f"/workouts/{workout['id']}/exercises/{we['id']}/sets",
+        json={"reps": 5, "weight_kg": 100},
+        headers=headers,
+    )
+    client.post(f"/workouts/{workout['id']}/finish", headers=headers)
+
+    # Move it to the most recent Sunday 22:30 UTC (always within the 12-week window).
+    now = datetime.now(timezone.utc)
+    sunday = now.date().fromordinal(now.date().toordinal() - ((now.weekday() + 1) % 7 or 7))
+    db = SessionLocal()
+    try:
+        row = db.get(Workout, workout["id"])
+        row.started_at = datetime(sunday.year, sunday.month, sunday.day, 22, 30, tzinfo=timezone.utc)
+        db.commit()
+    finally:
+        db.close()
+
+    monday_before = sunday.fromordinal(sunday.toordinal() - 6).isoformat()
+    monday_after = sunday.fromordinal(sunday.toordinal() + 1).isoformat()
+
+    utc = client.get("/stats/volume", headers=headers).json()
+    assert [w["week_start"] for w in utc] == [monday_before]
+    athens = client.get("/stats/volume?tz=Europe/Athens", headers=headers).json()
+    assert [w["week_start"] for w in athens] == [monday_after]
+
+    assert client.get("/stats/volume?tz=Not/AZone", headers=headers).status_code == 400
+
+
+def test_health_reports_database(client):
+    res = client.get("/health")
+    assert res.status_code == 200
+    assert res.json() == {"status": "ok", "database": True}
+
+
+def test_ops_routes_are_hidden_without_the_key(client, monkeypatch, tmp_path):
+    from app.routers import ops
+
+    assert client.get("/ops/status").status_code == 404  # no token configured
+    monkeypatch.setattr(ops.settings, "ops_token", "k" * 40)
+    monkeypatch.setattr(ops.settings, "backup_directory", str(tmp_path))
+    assert client.get("/ops/status").status_code == 404
+    assert client.get("/ops/status", headers={"X-Ops-Key": "wrong"}).status_code == 404
+    key = {"X-Ops-Key": "k" * 40}
+
+    res = client.get("/ops/status", headers=key)  # no backups yet
+    assert res.status_code == 503
+    assert res.json()["checks"]["database"] is True
+    assert res.json()["checks"]["backupFresh"] is False
+    assert client.get("/ops/backup", headers=key).status_code == 503
+
+    (tmp_path / "fitness-20260101T000000Z.db").write_bytes(b"plain")
+    (tmp_path / "fitness-20260101T000000Z.db.age").write_bytes(b"age-encryption.org/v1\n...")
+    res = client.get("/ops/status", headers=key)
+    assert res.json()["checks"]["backupFresh"] is True
+    assert res.json()["checks"]["archiveFresh"] is True
+    assert res.headers["cache-control"] == "no-store"
+
+    res = client.get("/ops/backup", headers=key)
+    assert res.status_code == 200
+    assert res.content.startswith(b"age-encryption.org/v1")  # never the plaintext .db

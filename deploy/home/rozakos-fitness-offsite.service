@@ -1,0 +1,9 @@
+[Unit]
+Description=Encrypted off-site backup of the office Fitness database
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/services/rozakos-fitness-ops
+ExecStart=/usr/bin/python3 %h/services/rozakos-fitness-ops/ops-agent.py backup
+TimeoutStartSec=35min
+UMask=0077

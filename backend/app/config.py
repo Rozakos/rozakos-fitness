@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     smtp_from_email: str | None = None
     smtp_starttls: bool = True
     algorithm: Literal["HS256"] = "HS256"
+    # Private operations API (routers/ops.py). Unset means the routes answer 404.
+    ops_token: str | None = Field(default=None, min_length=32)
+    backup_directory: str = "/var/backups/rozakos-fitness"
 
     model_config = {
         "env_file": ".env",

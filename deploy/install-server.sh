@@ -23,9 +23,14 @@ fi
 
 install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0700 "$STATE_DIR" "$BACKUP_DIR"
 
+# age encrypts the nightly backup for the off-site pull (docs/operations.md).
+if ! command -v age >/dev/null 2>&1; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq age
+fi
+
 python3 -m venv "$APP_DIR/.venv"
 "$APP_DIR/.venv/bin/pip" install --quiet --upgrade pip
-"$APP_DIR/.venv/bin/pip" install --quiet -r "$APP_DIR/backend/requirements.txt"
+"$APP_DIR/.venv/bin/pip" install --quiet -r "$APP_DIR/backend/requirements.txt" -c "$APP_DIR/backend/constraints.txt"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   umask 0077
@@ -45,7 +50,7 @@ systemctl restart rozakos-fitness.service
 systemctl enable --now rozakos-fitness-backup.timer
 
 for _ in {1..20}; do
-  if curl --fail --silent http://127.0.0.1:8002/ >/dev/null; then
+  if curl --fail --silent http://127.0.0.1:8002/health >/dev/null; then
     systemctl start rozakos-fitness-backup.service
     echo "Rozakos Fitness API is running on 127.0.0.1:8002."
     exit 0

@@ -1,0 +1,10 @@
+[Unit]
+Description=Check the office Fitness API every two minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+RandomizedDelaySec=10
+
+[Install]
+WantedBy=timers.target

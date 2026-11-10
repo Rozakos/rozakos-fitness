@@ -6,7 +6,7 @@ After=rozakos-fitness.service
 Type=oneshot
 User=rozakos-fitness
 Group=rozakos-fitness
-ExecStart=/opt/rozakos-fitness/.venv/bin/python /opt/rozakos-fitness/deploy/backup_sqlite.py /var/lib/rozakos-fitness/fitness.db /var/backups/rozakos-fitness --keep 30
+ExecStart=/opt/rozakos-fitness/.venv/bin/python /opt/rozakos-fitness/deploy/backup_sqlite.py /var/lib/rozakos-fitness/fitness.db /var/backups/rozakos-fitness --keep 30 --recipients /etc/rozakos-fitness-backup-recipients.txt
 UMask=0077
 
 NoNewPrivileges=true
