@@ -37,6 +37,21 @@ function SetRow({
 }) {
   const deleteSet = useDeleteSet();
   const { unit, intensityMode } = useSettings();
+  // a 16px "x" beside the set is easy to brush while scrolling; a logged set
+  // cannot be recovered, so ask first (same wording pattern as Remove exercise)
+  const confirmDelete = () =>
+    Alert.alert(
+      set.is_warmup ? "Delete warm-up set?" : `Delete set ${set.set_number}?`,
+      `${fromKg(set.weight_kg, unit)} ${unit} × ${set.reps} will be removed.`,
+      [
+        { text: "Keep", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteSet.mutate({ workoutId, weId, setId: set.id }),
+        },
+      ],
+    );
   return (
     <View style={styles.setRow}>
       <Text style={[styles.setNumber, set.is_warmup && { color: colors.textFaint }]}>
@@ -55,8 +70,10 @@ function SetRow({
         <View style={{ width: 24 }} />
       )}
       <Pressable
-        onPress={() => deleteSet.mutate({ workoutId, weId, setId: set.id })}
+        onPress={confirmDelete}
         hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Delete set"
       >
         <Ionicons name="close" size={16} color={colors.textFaint} />
       </Pressable>

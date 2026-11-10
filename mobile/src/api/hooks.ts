@@ -261,10 +261,26 @@ export function usePRs() {
   return useQuery<ExercisePRs[]>({ queryKey: ["prs"], queryFn: () => api("/stats/prs") });
 }
 
+/**
+ * The phone's IANA time zone, so the server buckets weeks on the same calendar
+ * the phone does (it used UTC, which moved a late-Sunday workout a week).
+ */
+function deviceTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+function volumePath(weeks: number): string {
+  return `/stats/volume?weeks=${weeks}&tz=${encodeURIComponent(deviceTimeZone())}`;
+}
+
 export function useWeeklyVolume(weeks = 12) {
   return useQuery<WeekVolume[]>({
     queryKey: ["volume", weeks],
-    queryFn: () => api(`/stats/volume?weeks=${weeks}`),
+    queryFn: () => api(volumePath(weeks)),
   });
 }
 
@@ -285,7 +301,7 @@ export function useRecentWeeks(weeks = 8) {
   return useQuery<{ week_start: string; total_volume_kg: number }[]>({
     queryKey: ["volume", weeks, "dense"],
     queryFn: async () => {
-      const data = await api<WeekVolume[]>(`/stats/volume?weeks=${weeks}`);
+      const data = await api<WeekVolume[]>(volumePath(weeks));
       const byWeek = new Map(data.map((w) => [w.week_start, w.total_volume_kg]));
       const now = new Date();
       return Array.from({ length: weeks }, (_, i) => {
