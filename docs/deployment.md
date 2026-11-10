@@ -1,13 +1,22 @@
 # Backend deployment
 
-The production API runs on VM 100 alongside the existing services:
+The production API runs in its own container on the office Proxmox cluster (verified
+2026-11-10):
 
+- host: **CT 216 `fitness`**, Debian, 1 core, 1 GB RAM, 8 GB `local-zfs`, office DHCP
+  `192.168.1.164`. HA rule `office-pair` (biz2/biz3, strict), replication job `216-0` to
+  `proxmoxbiz2` every 15 min. It normally runs on `proxmoxbiz3` (Tailscale `100.114.65.45`);
+  `ha-manager status | grep ct:216` shows the current node. Shell: `pct enter 216` on that node.
+- history: VM 100 at home until 2026-11-08, briefly CT 215 `web`, then CT 216 the same day.
+  The VM 100 and CT 215 copies are stopped and disabled, not deleted.
+- deployed commit: `090dcc9` (same as `main` on 2026-11-10)
 - checkout: `/opt/rozakos-fitness` (root-owned)
 - service user: `rozakos-fitness` (no login shell)
 - SQLite database: `/var/lib/rozakos-fitness/fitness.db`
 - environment: `/etc/rozakos-fitness.env` (`0640`, root/service group)
 - listener: `127.0.0.1:8002`, one Uvicorn worker
-- public hostname: `https://fitness-api.rozakos.eu` through the existing Cloudflare Tunnel
+- public hostname: `https://fitness-api.rozakos.eu` through the container's own Cloudflare Tunnel
+  `fitness-office` (`171a8148-2e3e-467b-933d-468e8688ed23`, config `/etc/cloudflared/config.yml`)
 - backups: `/var/backups/rozakos-fitness/`, daily SQLite online backup, 30 retained
 
 The database enables WAL, foreign keys, a five-second busy timeout, and normal synchronous
@@ -17,8 +26,8 @@ The public API is for store clients; it is not a private tailnet-only service.
 
 ## First install
 
-As root on VM 100, clone the public repository to `/opt/rozakos-fitness`, check out the
-intended commit, and run:
+These steps describe the original VM 100 install (shared tunnel `vat`). On a new host, as root,
+clone the public repository to `/opt/rozakos-fitness`, check out the intended commit, and run:
 
 ```bash
 bash /opt/rozakos-fitness/deploy/install-server.sh
@@ -27,11 +36,13 @@ cloudflared --config /etc/cloudflared/config.yml tunnel ingress validate
 systemctl restart cloudflared
 ```
 
-Create the DNS route once (the origin certificate lives under the `rozakos` account):
+Create the DNS route once. The origin certificate is not in CT 216; it lives under the
+`rozakos` account on VM 100 (`/home/rozakos/.cloudflared/cert.pem`), so run the route command
+there. The hostname currently routes to `fitness-office`:
 
 ```bash
 TUNNEL_ORIGIN_CERT=/home/rozakos/.cloudflared/cert.pem \
-  cloudflared tunnel route dns 24c4dd97-16fe-4721-ba2c-8ab9e7d36548 fitness-api.rozakos.eu
+  cloudflared tunnel route dns --overwrite-dns 171a8148-2e3e-467b-933d-468e8688ed23 fitness-api.rozakos.eu
 ```
 
 `install-server.sh` generates the JWT secret without printing it. It preserves an existing
@@ -39,7 +50,12 @@ environment file on later runs.
 
 ## Update
 
+CT 216 has the git checkout (`.git` is present) but **the `git` package is not installed in the
+container**, so install it once before the first update there (`apt-get install -y git`).
+Take an on-demand backup first:
+
 ```bash
+systemctl start rozakos-fitness-backup.service
 cd /opt/rozakos-fitness
 git pull --ff-only origin main
 bash deploy/install-server.sh
