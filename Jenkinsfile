@@ -41,7 +41,7 @@ pipeline {
         sh '''
           python3 -m venv .venv
           .venv/bin/pip install --quiet --upgrade pip
-          .venv/bin/pip install --quiet -r backend/requirements.txt
+          .venv/bin/pip install --quiet -r backend/requirements.txt -c backend/constraints.txt
           cd backend && ../.venv/bin/python -m pytest tests -q
         '''
         // Also covers test_catalog_sync.py, which asserts backend/app/seed.py

@@ -126,7 +126,7 @@ bare added weight (or 0) makes those sets vanish from volume and PR stats.
 | Method & path | Returns |
 |---|---|
 | `GET /stats/prs` | Per exercise: best weight at each rep count (capped at 12) with the date it was set |
-| `GET /stats/volume?weeks=12` | Per ISO week: `total_volume_kg` (Σ reps × weight) + `by_muscle_group` |
+| `GET /stats/volume?weeks=12&tz=Europe/Athens` | Per Monday-based week: `total_volume_kg` (Σ reps × weight) + `by_muscle_group`. `tz` is an IANA zone (default `UTC`) and decides which week a workout near midnight falls in; an unknown zone is 400 |
 | `GET /stats/exercise/{id}` | Per finished workout: `best_est_1rm` (Epley: `w × (1 + reps/30)`), `top_weight_kg`, `total_volume_kg` |
 | `GET /bodyweight?limit=90` | Newest first |
 | `POST /bodyweight` | `{date, weight_kg}` — one entry per day, same-day upserts |

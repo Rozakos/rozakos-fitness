@@ -1,7 +1,8 @@
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -70,14 +71,35 @@ def personal_records(db: Session = Depends(get_db), user: User = Depends(get_cur
 
 @router.get("/volume", response_model=list[WeekVolume])
 def weekly_volume(
-    weeks: int = 12, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    weeks: int = 12,
+    tz: str = "UTC",
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    """Total training volume (reps x weight) per ISO week, split by muscle group."""
-    cutoff = date.today() - timedelta(weeks=weeks)
-    rows = working_sets_query(db, user).filter(Workout.started_at >= cutoff).all()
+    """Total training volume (reps x weight) per ISO week, split by muscle group.
+
+    Weeks are Monday-based in the caller's time zone (`tz`, an IANA name). The phone
+    buckets by its local calendar, so without this a Sunday-night or Monday-morning
+    workout landed in a different week on the server than on the phone.
+    """
+    try:
+        zone = ZoneInfo(tz)
+    except (ZoneInfoNotFoundError, ValueError, OSError):
+        raise HTTPException(status_code=400, detail="Unknown time zone")
+    today = datetime.now(zone).date()
+    cutoff_day = today - timedelta(weeks=weeks)
+    cutoff = datetime(cutoff_day.year, cutoff_day.month, cutoff_day.day, tzinfo=zone)
+    rows = (
+        working_sets_query(db, user)
+        .filter(Workout.started_at >= cutoff.astimezone(timezone.utc))
+        .all()
+    )
     weeks_map: dict[date, dict] = {}
     for workout_set, we, workout in rows:
-        day = workout.started_at.date()
+        started = workout.started_at
+        if started.tzinfo is None:  # SQLite returns naive UTC
+            started = started.replace(tzinfo=timezone.utc)
+        day = started.astimezone(zone).date()
         week_start = day - timedelta(days=day.weekday())
         entry = weeks_map.setdefault(
             week_start, {"total": 0.0, "by_muscle": defaultdict(float)}
