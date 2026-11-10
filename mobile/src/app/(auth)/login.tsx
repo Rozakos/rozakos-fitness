@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   tagline: { color: colors.textMuted, textAlign: "center", marginTop: spacing.xs, marginBottom: spacing.xl },
   form: { gap: spacing.md },
   error: { color: colors.alert, textAlign: "center" },
-  link: { color: colors.accentBright, textAlign: "center", marginTop: spacing.sm },
+  link: { color: colors.accentText, textAlign: "center", marginTop: spacing.sm },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",

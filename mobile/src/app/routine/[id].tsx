@@ -92,15 +92,27 @@ export default function RoutineEditor() {
           <View style={styles.headerRow}>
             <Text style={styles.name}>{item.exercise.name}</Text>
             <View style={styles.iconRow}>
-              <Pressable onPress={() => move(index, -1)} hitSlop={6}>
+              <Pressable
+                onPress={() => move(index, -1)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={`Move ${item.exercise.name} up`}
+              >
                 <Ionicons name="chevron-up" size={18} color={colors.textMuted} />
               </Pressable>
-              <Pressable onPress={() => move(index, 1)} hitSlop={6}>
+              <Pressable
+                onPress={() => move(index, 1)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={`Move ${item.exercise.name} down`}
+              >
                 <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
               </Pressable>
               <Pressable
                 onPress={() => setItems((prev) => prev.filter((_, i) => i !== index))}
-                hitSlop={6}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${item.exercise.name} from routine`}
               >
                 <Ionicons name="trash-outline" size={18} color={colors.textFaint} />
               </Pressable>

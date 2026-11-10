@@ -41,6 +41,12 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{
+        disabled: !!(disabled || loading),
+        busy: !!loading,
+      }}
       style={({ pressed }) => [
         styles.button,
         variant === "primary" && { backgroundColor: colors.accent },
@@ -53,7 +59,12 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={colors.text} />
       ) : (
-        <Text style={[styles.buttonText, variant === "ghost" && { color: colors.accentBright }]}>
+        <Text
+          style={[
+            styles.buttonText,
+            variant === "ghost" && { color: colors.accentText },
+          ]}
+        >
           {title}
         </Text>
       )}
@@ -87,11 +98,44 @@ export function Badge({
   );
 }
 
-export function EmptyState({ title, subtitle }: { title: string; subtitle?: string }) {
+export function EmptyState({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
   return (
     <View style={styles.empty}>
       <Text style={styles.emptyTitle}>{title}</Text>
       {subtitle ? <Text style={styles.emptySubtitle}>{subtitle}</Text> : null}
+    </View>
+  );
+}
+
+/**
+ * A failed load with nothing saved to show. Without this a network failure
+ * rendered the same "No routines yet" as a genuinely empty account.
+ */
+export function ErrorState({
+  onRetry,
+  retrying,
+}: {
+  onRetry: () => void;
+  retrying?: boolean;
+}) {
+  return (
+    <View style={styles.empty} accessibilityRole="alert">
+      <Text style={styles.emptyTitle}>Couldn&apos;t load this</Text>
+      <Text style={styles.emptySubtitle}>
+        Check your connection and try again. Nothing you logged has been lost.
+      </Text>
+      <Button
+        title="Try again"
+        variant="secondary"
+        onPress={onRetry}
+        loading={retrying}
+      />
     </View>
   );
 }

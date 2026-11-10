@@ -101,6 +101,7 @@ export function ExerciseVideoLink({ exercise }: { exercise: Exercise }) {
       <Pressable
         onPress={() => openVideo(exercise.video_url!)}
         style={({ pressed }) => [styles.playButton, pressed && { opacity: 0.7 }]}
+        accessibilityRole="link"
       >
         <Ionicons name="logo-youtube" size={20} color={YOUTUBE_RED} />
         <Text style={styles.playText}>Watch how it&apos;s done</Text>

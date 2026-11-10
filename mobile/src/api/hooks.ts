@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "./client";
 import type {
@@ -26,6 +26,10 @@ export function useExercises(search?: string, muscleGroup?: string) {
   return useQuery<Exercise[]>({
     queryKey: ["exercises", search ?? "", muscleGroup ?? ""],
     queryFn: () => api(`/exercises${qs ? `?${qs}` : ""}`),
+    // Each keystroke in the search box is a new query key. Without this the
+    // screen fell back to its full-page spinner on every letter, which unmounted
+    // the search input and closed the keyboard mid-word.
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -3,7 +3,9 @@ export const colors = {
   // brand
   primaryDark: "#2c2c3e",
   accent: "#a5211f",
-  accentBright: "#c94a3d", // readable variant of the crimson on dark surfaces
+  accentBright: "#c94a3d", // crimson for fills and large marks on dark surfaces
+  // crimson for TEXT: 4.5:1 on surface, 5.4:1 on bg (accentBright is 2.95:1, below AA)
+  accentText: "#e57264",
   success: "#2fb1a2",
   alert: "#dc5a5a",
 
@@ -16,7 +18,8 @@ export const colors = {
   // text
   text: "#f4f4f4",
   textMuted: "#a0a0b8",
-  textFaint: "#6e6e88",
+  // 4.5:1 on surface. Was #6e6e88 (2.76:1), used for 10-11px labels nobody could read.
+  textFaint: "#9292ab",
 
   // chart hues — validated ≥3:1 against surface #2c2c3e (dataviz six checks)
   chartTeal: "#2aa596",

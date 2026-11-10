@@ -381,6 +381,9 @@ export function WorkoutExerciseCard({
           hitSlop={4}
           disabled={!effectiveWeight}
           style={{ opacity: effectiveWeight ? 1 : 0.4 }}
+          accessibilityRole="button"
+          accessibilityLabel="Plate calculator"
+          accessibilityState={{ disabled: !effectiveWeight }}
         >
           <Ionicons name="disc-outline" size={20} color={colors.textMuted} />
         </Pressable>

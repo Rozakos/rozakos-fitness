@@ -92,5 +92,5 @@ const styles = StyleSheet.create({
   },
   label: { color: colors.text, fontSize: 16, fontWeight: "600", flexShrink: 1 },
   cancel: { justifyContent: "center" },
-  cancelText: { color: colors.accentBright, fontSize: 16, fontWeight: "700" },
+  cancelText: { color: colors.accentText, fontSize: 16, fontWeight: "700" },
 });

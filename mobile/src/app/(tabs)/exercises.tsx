@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
 
 import { useExercises } from "@/api/hooks";
-import { Input, Loading } from "@/components/ui";
+import { EmptyState, ErrorState, Input, Loading } from "@/components/ui";
 import { colors, radius, spacing } from "@/theme/colors";
 import { useRefreshControl } from "@/hooks/use-refresh-control";
 
@@ -11,9 +11,17 @@ export default function Exercises() {
   const refreshControl = useRefreshControl();
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const { data: exercises, isLoading } = useExercises(search || undefined);
+  const {
+    data: exercises,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useExercises(search || undefined);
 
   if (isLoading) return <Loading />;
+  if (isError && !exercises)
+    return <ErrorState onRetry={() => refetch()} retrying={isRefetching} />;
 
   const groups = new Map<string, typeof exercises>();
   for (const exercise of exercises ?? []) {
@@ -21,17 +29,32 @@ export default function Exercises() {
     list.push(exercise);
     groups.set(exercise.muscle_group, list);
   }
-  const sections = [...groups.entries()].map(([title, data]) => ({ title, data: data ?? [] }));
+  const sections = [...groups.entries()].map(([title, data]) => ({
+    title,
+    data: data ?? [],
+  }));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, padding: spacing.md }}>
-      <Input placeholder="Search exercises..." value={search} onChangeText={setSearch} />
+      <Input
+        placeholder="Search exercises..."
+        value={search}
+        onChangeText={setSearch}
+      />
       <SectionList
-      refreshControl={refreshControl}
+        refreshControl={refreshControl}
         sections={sections}
         keyExtractor={(e) => String(e.id)}
         stickySectionHeadersEnabled={false}
         contentContainerStyle={{ paddingVertical: spacing.sm }}
+        ListEmptyComponent={
+          <EmptyState
+            title={search ? `No exercises match "${search}"` : "No exercises"}
+            subtitle={
+              search ? "Check the spelling or try a shorter word." : undefined
+            }
+          />
+        }
         // the search box sits above this list, so without "handled" the first
         // tap on a result only dismisses the keyboard
         keyboardShouldPersistTaps="handled"
@@ -39,7 +62,10 @@ export default function Exercises() {
           <Text style={styles.sectionHeader}>{section.title}</Text>
         )}
         renderItem={({ item }) => (
-          <Pressable style={styles.row} onPress={() => router.navigate(`/exercise/${item.id}`)}>
+          <Pressable
+            style={styles.row}
+            onPress={() => router.navigate(`/exercise/${item.id}`)}
+          >
             <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.muted}>
               {item.equipment}
@@ -54,7 +80,7 @@ export default function Exercises() {
 
 const styles = StyleSheet.create({
   sectionHeader: {
-    color: colors.accentBright,
+    color: colors.accentText,
     fontSize: 13,
     fontWeight: "800",
     textTransform: "uppercase",

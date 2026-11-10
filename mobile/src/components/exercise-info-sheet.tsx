@@ -67,7 +67,12 @@ export function ExerciseInfoSheet({
                   {exercise.rest_seconds_default}s
                 </Text>
               </View>
-              <Pressable onPress={onClose} hitSlop={10}>
+              <Pressable
+                onPress={onClose}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
                 <Ionicons name="close" size={22} color={colors.textMuted} />
               </Pressable>
             </View>

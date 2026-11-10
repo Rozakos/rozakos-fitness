@@ -88,7 +88,12 @@ export function ExerciseSetupList({ exercise }: { exercise: Exercise }) {
               maxLength={40}
               style={styles.valueInput}
             />
-            <Pressable onPress={() => removeRow(row.key)} hitSlop={8}>
+            <Pressable
+              onPress={() => removeRow(row.key)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Remove setting"
+            >
               <Ionicons name="close" size={18} color={colors.textFaint} />
             </Pressable>
           </View>
@@ -149,5 +154,5 @@ const styles = StyleSheet.create({
   labelInput: { flex: 1.6, paddingVertical: 8 },
   valueInput: { flex: 1, paddingVertical: 8, textAlign: "center" },
   addRow: { paddingVertical: spacing.xs },
-  linkAction: { color: colors.accentBright, fontSize: 13, fontWeight: "700" },
+  linkAction: { color: colors.accentText, fontSize: 13, fontWeight: "700" },
 });

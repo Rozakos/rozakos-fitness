@@ -3,20 +3,31 @@ import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useActiveWorkout, useRoutines, useStartWorkout } from "@/api/hooks";
-import { Button, Card, EmptyState, Loading } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorState, Loading } from "@/components/ui";
 import { useRefreshControl } from "@/hooks/use-refresh-control";
 import { colors, spacing } from "@/theme/colors";
 
 export default function Routines() {
   const router = useRouter();
-  const { data: routines, isLoading } = useRoutines();
+  const {
+    data: routines,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useRoutines();
   const { data: active } = useActiveWorkout();
   const startWorkout = useStartWorkout();
   const refreshControl = useRefreshControl();
   // only the routine actually being started shows a spinner
-  const startingId = startWorkout.isPending ? startWorkout.variables?.routine_id : undefined;
+  const startingId = startWorkout.isPending
+    ? startWorkout.variables?.routine_id
+    : undefined;
 
   if (isLoading) return <Loading />;
+  // only when there is nothing saved to show; with cached data the list stays up
+  if (isError && !routines)
+    return <ErrorState onRetry={() => refetch()} retrying={isRefetching} />;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, padding: spacing.md }}>
@@ -24,14 +35,21 @@ export default function Routines() {
       {active ? (
         <Pressable
           onPress={() => router.navigate("/workout")}
-          style={({ pressed }) => [styles.activeBanner, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [
+            styles.activeBanner,
+            pressed && { opacity: 0.7 },
+          ]}
+          accessibilityRole="button"
         >
           <Ionicons name="barbell" size={18} color={colors.text} />
           <Text style={styles.activeText}>Workout in progress — continue</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.text} />
         </Pressable>
       ) : null}
-      <Button title="+ New routine" onPress={() => router.navigate("/routine/new")} />
+      <Button
+        title="+ New routine"
+        onPress={() => router.navigate("/routine/new")}
+      />
       <FlatList
         refreshControl={refreshControl}
         data={routines ?? []}
@@ -47,7 +65,8 @@ export default function Routines() {
           <Card>
             <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.muted}>
-              {item.exercises.map((e) => e.exercise.name).join(" · ") || "empty"}
+              {item.exercises.map((e) => e.exercise.name).join(" · ") ||
+                "empty"}
             </Text>
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
@@ -78,7 +97,12 @@ export default function Routines() {
 
 const styles = StyleSheet.create({
   name: { color: colors.text, fontSize: 17, fontWeight: "700" },
-  muted: { color: colors.textMuted, fontSize: 12, marginTop: 2, marginBottom: spacing.sm },
+  muted: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+    marginBottom: spacing.sm,
+  },
   row: { flexDirection: "row", gap: spacing.sm },
   activeBanner: {
     flexDirection: "row",
